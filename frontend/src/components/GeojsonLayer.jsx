@@ -1,5 +1,6 @@
 import React from 'react';
 import { GeoJSON } from 'react-leaflet';
+import L from 'leaflet';
 
 function GeojsonLayer({ data, type, filters, onStopClick }) {
   const getRouteStyle = (feature) => {

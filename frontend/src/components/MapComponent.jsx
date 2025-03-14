@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import GeojsonLayer from './GeojsonLayer';
 import TransportInfo from './TransportInfo';
 import OptimizeRoute from './OptimizeRoute';
@@ -17,6 +17,13 @@ function MapComponent({ filters }) {
   const [optimizedRoute, setOptimizedRoute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [locationInput, setLocationInput] = useState({
+    startLat: 45.188529,
+    startLng: 5.724524,
+    endLat: 45.191676,
+    endLng: 5.730119
+  });
+  const [transportMode, setTransportMode] = useState('walking');
 
   useEffect(() => {
     // Fetch routes data
@@ -85,6 +92,37 @@ function MapComponent({ filters }) {
     });
   };
 
+  const handleLocationInputChange = (e) => {
+    const { name, value } = e.target;
+    setLocationInput({
+      ...locationInput,
+      [name]: parseFloat(value)
+    });
+  };
+
+  const handleTransportModeChange = (e) => {
+    setTransportMode(e.target.value);
+  };
+
+  const generateRoute = () => {
+    const { startLat, startLng, endLat, endLng } = locationInput;
+    
+    axios.get('/api/optimize', {
+      params: {
+        start_lat: startLat,
+        start_lng: startLng,
+        end_lat: endLat,
+        end_lng: endLng,
+        transport_mode: transportMode
+      }
+    }).then(response => {
+      setOptimizedRoute(response.data);
+    }).catch(error => {
+      console.error('Error optimizing route:', error);
+      setError('Failed to optimize route');
+    });
+  };
+
   if (loading) return <div>Loading map data...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -131,40 +169,58 @@ function MapComponent({ filters }) {
       
       <div className="route-optimizer">
         <h3>Route Optimizer</h3>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          const start = {
-            lat: parseFloat(e.target.startLat.value),
-            lng: parseFloat(e.target.startLng.value)
-          };
-          const end = {
-            lat: parseFloat(e.target.endLat.value),
-            lng: parseFloat(e.target.endLng.value)
-          };
-          const mode = e.target.transportMode.value;
-          handleOptimizeRoute(start, end, mode);
-        }}>
-          <div className="form-group">
-            <label>Start Point:</label>
-            <input type="number" name="startLat" placeholder="Latitude" step="0.000001" required />
-            <input type="number" name="startLng" placeholder="Longitude" step="0.000001" required />
-          </div>
-          <div className="form-group">
-            <label>End Point:</label>
-            <input type="number" name="endLat" placeholder="Latitude" step="0.000001" required />
-            <input type="number" name="endLng" placeholder="Longitude" step="0.000001" required />
-          </div>
-          <div className="form-group">
-            <label>Transport Mode:</label>
-            <select name="transportMode">
-              <option value="walking">Walking</option>
-              <option value="cycling">Cycling</option>
-              <option value="driving">Driving</option>
-              <option value="transit">Public Transit</option>
-            </select>
-          </div>
-          <button type="submit">Find Route</button>
-        </form>
+        <div className="form-group">
+          <label>Start Point:</label>
+          <input 
+            type="number" 
+            name="startLat" 
+            value={locationInput.startLat} 
+            onChange={handleLocationInputChange} 
+            placeholder="Latitude" 
+            step="0.000001" 
+            required 
+          />
+          <input 
+            type="number" 
+            name="startLng" 
+            value={locationInput.startLng} 
+            onChange={handleLocationInputChange} 
+            placeholder="Longitude" 
+            step="0.000001" 
+            required 
+          />
+        </div>
+        <div className="form-group">
+          <label>End Point:</label>
+          <input 
+            type="number" 
+            name="endLat" 
+            value={locationInput.endLat} 
+            onChange={handleLocationInputChange} 
+            placeholder="Latitude" 
+            step="0.000001" 
+            required 
+          />
+          <input 
+            type="number" 
+            name="endLng" 
+            value={locationInput.endLng} 
+            onChange={handleLocationInputChange} 
+            placeholder="Longitude" 
+            step="0.000001" 
+            required 
+          />
+        </div>
+        <div className="form-group">
+          <label>Transport Mode:</label>
+          <select name="transportMode" value={transportMode} onChange={handleTransportModeChange}>
+            <option value="walking">Walking</option>
+            <option value="cycling">Cycling</option>
+            <option value="driving">Driving</option>
+            <option value="transit">Public Transit</option>
+          </select>
+        </div>
+        <button type="button" onClick={generateRoute}>Find Route</button>
       </div>
     </div>
   );
