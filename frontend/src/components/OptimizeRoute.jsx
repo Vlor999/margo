@@ -11,7 +11,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-function OptimizeRoute({ route }) {
+function OptimizeRoute({ route, simplified = false }) {
   if (!route || !route.route || route.route.length < 2) return null;
   
   // Extract coordinates for the polyline
@@ -36,6 +36,8 @@ function OptimizeRoute({ route }) {
       color = '#3388ff'; // Default blue
   }
 
+  // If simplified mode is requested, just show a direct route
+  // without segments or intermediate markers
   return (
     <>
       <Polyline 

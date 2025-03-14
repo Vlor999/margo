@@ -24,6 +24,13 @@ function MapComponent({ filters }) {
     endLng: 5.730119
   });
   const [transportMode, setTransportMode] = useState('walking');
+  const [routeInputType, setRouteInputType] = useState('address'); // 'address' or 'coordinates'
+  const [addressInput, setAddressInput] = useState({
+    startAddress: 'Gare de Grenoble',
+    endAddress: 'Maison de la Montagne, Grenoble'
+  });
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [showBackgroundRoutes, setShowBackgroundRoutes] = useState(true);
 
   useEffect(() => {
     // Fetch routes data
@@ -75,23 +82,6 @@ function MapComponent({ filters }) {
     }
   };
 
-  const handleOptimizeRoute = (start, end, mode) => {
-    axios.get('/api/optimize', {
-      params: {
-        start_lat: start.lat,
-        start_lng: start.lng,
-        end_lat: end.lat,
-        end_lng: end.lng,
-        transport_mode: mode
-      }
-    }).then(response => {
-      setOptimizedRoute(response.data);
-    }).catch(error => {
-      console.error('Error optimizing route:', error);
-      setError('Failed to optimize route');
-    });
-  };
-
   const handleLocationInputChange = (e) => {
     const { name, value } = e.target;
     setLocationInput({
@@ -104,126 +94,230 @@ function MapComponent({ filters }) {
     setTransportMode(e.target.value);
   };
 
-  const generateRoute = () => {
-    const { startLat, startLng, endLat, endLng } = locationInput;
-    
-    axios.get('/api/optimize', {
-      params: {
-        start_lat: startLat,
-        start_lng: startLng,
-        end_lat: endLat,
-        end_lng: endLng,
-        transport_mode: transportMode
-      }
-    }).then(response => {
-      setOptimizedRoute(response.data);
-    }).catch(error => {
-      console.error('Error optimizing route:', error);
-      setError('Failed to optimize route');
+  const handleAddressInputChange = (e) => {
+    const { name, value } = e.target;
+    setAddressInput({
+      ...addressInput,
+      [name]: value
     });
+  };
+
+  const toggleRouteInputType = () => {
+    setRouteInputType(routeInputType === 'address' ? 'coordinates' : 'address');
+  };
+
+  const generateRoute = () => {
+    setIsCalculating(true);
+    setError(null);
+    
+    let params = {
+      transport_mode: transportMode
+    };
+    
+    if (routeInputType === 'coordinates') {
+      params = {
+        ...params,
+        start_lat: locationInput.startLat,
+        start_lng: locationInput.startLng,
+        end_lat: locationInput.endLat,
+        end_lng: locationInput.endLng
+      };
+    } else {
+      params = {
+        ...params,
+        start_address: addressInput.startAddress,
+        end_address: addressInput.endAddress
+      };
+    }
+    
+    axios.get('/api/optimize', { params })
+      .then(response => {
+        setOptimizedRoute(response.data);
+        setShowBackgroundRoutes(false); // Hide background routes when showing the path
+      })
+      .catch(error => {
+        console.error('Error optimizing route:', error);
+        setError(error.response?.data?.detail || 'Failed to optimize route');
+      })
+      .finally(() => {
+        setIsCalculating(false);
+      });
+  };
+
+  const resetRoute = () => {
+    setOptimizedRoute(null);
+    setShowBackgroundRoutes(true);
   };
 
   if (loading) return <div>Loading map data...</div>;
   if (error) return <div>Error: {error}</div>;
 
-  return (
+return (
     <div className="map-container">
-      <MapContainer 
-        center={GRENOBLE_CENTER} 
-        zoom={ZOOM_LEVEL} 
-        style={{ height: '80vh', width: '100%' }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <MapContainer 
+            center={GRENOBLE_CENTER} 
+            zoom={ZOOM_LEVEL} 
+            style={{ height: '80vh', width: '100%' }}
+        >
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            
+            {/* Only show background routes when not showing a specific route */}
+            {showBackgroundRoutes && routesData && (
+                <GeojsonLayer 
+                    data={routesData} 
+                    type="route" 
+                    filters={filters}
+                />
+            )}
+            
+            {/* Only show transport routes when not showing a specific route */}
+            {showBackgroundRoutes && transportData && (
+                <GeojsonLayer 
+                    data={transportData} 
+                    type="transport" 
+                    filters={filters}
+                    onStopClick={handleStopClick}
+                />
+            )}
+            
+            {/* The optimized route will be shown regardless */}
+            {optimizedRoute && (
+                <OptimizeRoute route={optimizedRoute} simplified={true} />
+            )}
+        </MapContainer>
         
-        {routesData && (
-          <GeojsonLayer 
-            data={routesData} 
-            type="route" 
-            filters={filters}
-          />
+        {selectedStop && (
+            <TransportInfo 
+                stopInfo={selectedStop} 
+                onClose={() => setSelectedStop(null)} 
+            />
         )}
         
-        {transportData && (
-          <GeojsonLayer 
-            data={transportData} 
-            type="transport" 
-            filters={filters}
-            onStopClick={handleStopClick}
-          />
-        )}
-        
-        {optimizedRoute && (
-          <OptimizeRoute route={optimizedRoute} />
-        )}
-      </MapContainer>
-      
-      {selectedStop && (
-        <TransportInfo 
-          stopInfo={selectedStop} 
-          onClose={() => setSelectedStop(null)} 
-        />
-      )}
-      
-      <div className="route-optimizer">
-        <h3>Route Optimizer</h3>
-        <div className="form-group">
-          <label>Start Point:</label>
-          <input 
-            type="number" 
-            name="startLat" 
-            value={locationInput.startLat} 
-            onChange={handleLocationInputChange} 
-            placeholder="Latitude" 
-            step="0.000001" 
-            required 
-          />
-          <input 
-            type="number" 
-            name="startLng" 
-            value={locationInput.startLng} 
-            onChange={handleLocationInputChange} 
-            placeholder="Longitude" 
-            step="0.000001" 
-            required 
-          />
+        <div className="route-optimizer">
+            <h3>Route Optimizer</h3>
+            <div className="input-type-toggle">
+                <button 
+                    className={`toggle-btn ${routeInputType === 'address' ? 'active' : ''}`} 
+                    onClick={toggleRouteInputType}
+                >
+                    Address
+                </button>
+                <button 
+                    className={`toggle-btn ${routeInputType === 'coordinates' ? 'active' : ''}`} 
+                    onClick={toggleRouteInputType}
+                >
+                    Coordinates
+                </button>
+            </div>
+            
+            {routeInputType === 'address' ? (
+                <>
+                    <div className="form-group">
+                        <label>Start Address:</label>
+                        <input 
+                            type="text" 
+                            name="startAddress" 
+                            value={addressInput.startAddress} 
+                            onChange={handleAddressInputChange} 
+                            placeholder="Enter start address"
+                            required 
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>End Address:</label>
+                        <input 
+                            type="text" 
+                            name="endAddress" 
+                            value={addressInput.endAddress} 
+                            onChange={handleAddressInputChange} 
+                            placeholder="Enter destination address"
+                            required 
+                        />
+                    </div>
+                </>
+            ) : (
+                <>
+                    <div className="form-group">
+                        <label>Start Point:</label>
+                        <input 
+                            type="number" 
+                            name="startLat" 
+                            value={locationInput.startLat} 
+                            onChange={handleLocationInputChange} 
+                            placeholder="Latitude" 
+                            step="0.000001" 
+                            required 
+                        />
+                        <input 
+                            type="number" 
+                            name="startLng" 
+                            value={locationInput.startLng} 
+                            onChange={handleLocationInputChange} 
+                            placeholder="Longitude" 
+                            step="0.000001" 
+                            required 
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label>End Point:</label>
+                        <input 
+                            type="number" 
+                            name="endLat" 
+                            value={locationInput.endLat} 
+                            onChange={handleLocationInputChange} 
+                            placeholder="Latitude" 
+                            step="0.000001" 
+                            required 
+                        />
+                        <input 
+                            type="number" 
+                            name="endLng" 
+                            value={locationInput.endLng} 
+                            onChange={handleLocationInputChange} 
+                            placeholder="Longitude" 
+                            step="0.000001" 
+                            required 
+                        />
+                    </div>
+                </>
+            )}
+            
+            <div className="form-group">
+                <label>Transport Mode:</label>
+                <select name="transportMode" value={transportMode} onChange={handleTransportModeChange}>
+                    <option value="walking">Walking</option>
+                    <option value="cycling">Cycling</option>
+                    <option value="driving">Driving</option>
+                    <option value="transit">Public Transit</option>
+                </select>
+            </div>
+            
+            <button 
+                type="button" 
+                onClick={generateRoute} 
+                disabled={isCalculating}
+                className={isCalculating ? 'calculating' : ''}
+            >
+                {isCalculating ? 'Calculating...' : 'Find Route'}
+            </button>
+            
+            {optimizedRoute && (
+                <button 
+                    type="button" 
+                    onClick={resetRoute} 
+                    className="reset-route-btn"
+                >
+                    Clear Route
+                </button>
+            )}
+            
+            {error && <div className="error-message">{error}</div>}
         </div>
-        <div className="form-group">
-          <label>End Point:</label>
-          <input 
-            type="number" 
-            name="endLat" 
-            value={locationInput.endLat} 
-            onChange={handleLocationInputChange} 
-            placeholder="Latitude" 
-            step="0.000001" 
-            required 
-          />
-          <input 
-            type="number" 
-            name="endLng" 
-            value={locationInput.endLng} 
-            onChange={handleLocationInputChange} 
-            placeholder="Longitude" 
-            step="0.000001" 
-            required 
-          />
-        </div>
-        <div className="form-group">
-          <label>Transport Mode:</label>
-          <select name="transportMode" value={transportMode} onChange={handleTransportModeChange}>
-            <option value="walking">Walking</option>
-            <option value="cycling">Cycling</option>
-            <option value="driving">Driving</option>
-            <option value="transit">Public Transit</option>
-          </select>
-        </div>
-        <button type="button" onClick={generateRoute}>Find Route</button>
-      </div>
     </div>
-  );
+);
 }
 
 export default MapComponent;
