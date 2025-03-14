@@ -1,16 +1,48 @@
-import React from 'react';
-import { GeoJSON } from 'react-leaflet';
+import React, { useRef, useEffect } from 'react';
+import { GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 function GeojsonLayer({ data, type, filters, onStopClick }) {
+  const geoJsonRef = useRef(null);
+  const map = useMap();
+  
+  // Optimize data if needed before rendering
+  const optimizedData = React.useMemo(() => {
+    // If no data, return null
+    if (!data || !data.features) return null;
+    
+    // Clone the data to avoid mutating the original
+    const clonedData = JSON.parse(JSON.stringify(data));
+    
+    // For large datasets, consider simplifying the features based on zoom
+    const zoom = map.getZoom();
+    const simplifyThreshold = zoom < 13 ? 0.0001 : 0;
+    
+    // If we're at a low zoom level, limit the number of features
+    if (zoom < 12) {
+      // Keep only major roads and transit lines for better performance
+      clonedData.features = clonedData.features.filter(feature => {
+        const props = feature.properties || {};
+        if (type === 'route') {
+          return ['primary', 'secondary', 'motorway', 'trunk'].includes(props.highway);
+        } else if (type === 'transport') {
+          return props.route_type === 'tram';
+        }
+        return true;
+      });
+    }
+    
+    return clonedData;
+  }, [data, map.getZoom(), type]);
+  
   const getRouteStyle = (feature) => {
     const properties = feature.properties || {};
     
-    // Default style
+    // Default style - reduced weight from 2 to 0.8
     let style = {
       color: '#3388ff',
-      weight: 2,
-      opacity: 0.7
+      weight: 0.8,
+      opacity: 0.6
     };
     
     // Route type styles
@@ -19,18 +51,20 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
       
       if (highway === 'footway' || highway === 'path' || highway === 'pedestrian') {
         style.color = '#8B4513'; // Brown for pedestrian paths
-        style.weight = 1;
+        style.weight = 0.5;
       } else if (highway === 'cycleway') {
         style.color = '#006400'; // Dark green for bicycle paths
-        style.dashArray = '5, 5';
+        style.weight = 0.7;
+        style.dashArray = '3, 3'; // Reduced from '5, 5'
       } else if (highway === 'primary') {
         style.color = '#FF0000'; // Red for primary roads
-        style.weight = 3;
+        style.weight = 1.5; // Reduced from 3
       } else if (highway === 'secondary') {
         style.color = '#FFA500'; // Orange for secondary roads
-        style.weight = 2;
+        style.weight = 1; // Reduced from 2
       } else if (highway === 'residential') {
         style.color = '#808080'; // Gray for residential roads
+        style.weight = 0.6;
       }
     } 
     // Transport type styles
@@ -39,13 +73,13 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
       
       if (routeType === 'tram') {
         style.color = '#00BFFF'; // Blue for tram routes
-        style.weight = 4;
+        style.weight = 1.5; // Reduced from 4
       } else if (routeType === 'bus') {
         style.color = '#32CD32'; // Green for bus routes
-        style.weight = 3;
+        style.weight = 1; // Reduced from 3
       } else if (routeType === 'subway') {
         style.color = '#800080'; // Purple for subway
-        style.weight = 4;
+        style.weight = 1.5; // Reduced from 4
       }
     }
     
@@ -55,12 +89,12 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
   const getPointStyle = (feature) => {
     const properties = feature.properties || {};
     
-    // Default style for points
+    // Default style for points - reduced radius from 6 to 3
     let style = {
-      radius: 6,
+      radius: 3,
       fillColor: "#3388ff",
       color: "#000",
-      weight: 1,
+      weight: 0.5, // Reduced from 1
       opacity: 1,
       fillOpacity: 0.8
     };
@@ -69,8 +103,10 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
     if (properties.public_transport === 'stop_position') {
       if (properties.bus === 'yes') {
         style.fillColor = '#32CD32'; // Green for bus stops
+        style.radius = 2.5; // Smaller radius for bus stops
       } else if (properties.tram === 'yes') {
         style.fillColor = '#00BFFF'; // Blue for tram stops
+        style.radius = 2.5; // Smaller radius for tram stops
       }
     }
     
@@ -118,15 +154,45 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
       }
     }
   };
+  
+  // Pause rendering during map move for better performance
+  useEffect(() => {
+    if (!geoJsonRef.current) return;
+    
+    const onMoveStart = () => {
+      if (geoJsonRef.current && geoJsonRef.current.leafletElement) {
+        geoJsonRef.current.leafletElement.options.renderer = L.svg({ padding: 0.5 });
+      }
+    };
+    
+    const onMoveEnd = () => {
+      if (geoJsonRef.current && geoJsonRef.current.leafletElement) {
+        geoJsonRef.current.leafletElement.options.renderer = L.canvas({ padding: 0.5 });
+        geoJsonRef.current.leafletElement.redraw();
+      }
+    };
+    
+    map.on('movestart', onMoveStart);
+    map.on('moveend', onMoveEnd);
+    
+    return () => {
+      map.off('movestart', onMoveStart);
+      map.off('moveend', onMoveEnd);
+    };
+  }, [map]);
+
+  if (!optimizedData) return null;
 
   return (
     <GeoJSON 
-      data={data}
+      data={optimizedData}
       style={(feature) => feature.geometry.type === 'Point' ? null : getRouteStyle(feature)}
       pointToLayer={(feature, latlng) => {
         return L.circleMarker(latlng, getPointStyle(feature));
       }}
       onEachFeature={onEachFeature}
+      ref={geoJsonRef}
+      renderer={L.canvas({ padding: 0.5 })} // Use canvas renderer for better performance
     />
   );
 }

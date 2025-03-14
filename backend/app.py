@@ -9,6 +9,10 @@ from pathlib import Path
 import math
 import numpy as np
 from typing import Optional
+import qrcode
+import io
+from fastapi.responses import StreamingResponse
+from mtag_api import calculate_tram_route  # Import the function from mtag_api.py
 
 app = FastAPI(title="Grenoble Transport API")
 
@@ -54,9 +58,9 @@ async def get_routes_data():
 
 @app.get("/api/geojson/transport")
 async def get_transport_data():
-    """Get transport data from data_transport_commun_grenoble.geojson file"""
+    """Get transport data from data_transport_commun_grenoble_formate.geojson file"""
     try:
-        file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble.geojson")
+        file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble_formate.geojson")
         with open(file_path, 'r') as file:
             data = json.load(file)
         return data
@@ -124,6 +128,88 @@ async def geocode_address(address: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Helper function to calculate distance between two points using Haversine formula
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # Earth radius in kilometers
+    dLat = (lat2 - lat1) * math.pi / 180
+    dLon = (lon2 - lon1) * math.pi / 180
+    a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) * math.sin(dLon / 2) * math.sin(dLon / 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+def extract_tram_route(tram_route):
+    """Extract route points and other details from the tram route"""
+    route_points = []
+    segments = []
+    total_distance = tram_route["walkDistance"] / 1000  # Convert meters to kilometers
+    duration = tram_route['duration']
+    
+    for key in tram_route:
+        if key == 'legs':
+            for elem in tram_route['legs']:
+                mode = elem['mode']
+                if mode == 'WALK':
+                    # Walking segment
+                    segment_points = [{"lat": elem['from']['lat'], "lng": elem['from']['lon']}]
+                    for step in elem.get('steps', []):
+                        segment_points.append({"lat": step['lat'], "lng": step['lon']})
+                    segment_points.append({"lat": elem['to']['lat'], "lng": elem['to']['lon']})
+                    
+                    segments.append({
+                        "type": "walking",
+                        "points": segment_points
+                    })
+                    
+                    route_points.extend(segment_points)
+                elif mode == 'TRAM':
+                    # Tram segment
+                    leg = elem['legGeometry']
+                    segment_points = [{"lat": elem['from']['lat'], "lng": elem['from']['lon']}]
+                    # Decode polyline points
+                    segment_points = []
+                    polyline = leg['points']
+                    index, lat, lng = 0, 0, 0
+                    while index < len(polyline):
+                        b, shift, result = 0, 0, 0
+                        while True:
+                            b = ord(polyline[index]) - 63
+                            index += 1
+                            result |= (b & 0x1f) << shift
+                            shift += 5
+                            if b < 0x20:
+                                break
+                        dlat = ~(result >> 1) if (result & 1) else (result >> 1)
+                        lat += dlat
+
+                        shift, result = 0, 0
+                        while True:
+                            b = ord(polyline[index]) - 63
+                            index += 1
+                            result |= (b & 0x1f) << shift
+                            shift += 5
+                            if b < 0x20:
+                                break
+                        dlng = ~(result >> 1) if (result & 1) else (result >> 1)
+                        lng += dlng
+
+                        segment_points.append({"lat": lat / 1e5, "lng": lng / 1e5})
+                
+                segments.append({
+                    "type": "tram" if mode == 'TRAM' else "walking",
+                    "line_name": elem.get('routeShortName', 'Tram') if mode == 'TRAM' else None,
+                    "points": segment_points
+                })
+                
+                route_points.extend(segment_points)
+    
+    return {
+        "route": route_points,
+        "segments": segments,
+        "distance": round(total_distance, 2),
+        "duration": round(duration),  # Convert seconds to minutes
+        "transport_mode": "tram"
+    }
+
 @app.get("/api/optimize")
 async def optimize_route(
     start_lat: Optional[float] = None, 
@@ -148,9 +234,13 @@ async def optimize_route(
         if not all([start_lat, start_lng, end_lat, end_lng]):
             raise HTTPException(status_code=400, detail="Missing coordinates or addresses")
 
-        # Special case for transit mode
-        if transport_mode == "transit":
-            return await optimize_transit_route(start_lat, start_lng, end_lat, end_lng)
+        # Special case for tram mode using MTAG API
+        if transport_mode == "tram" or transport_mode == "transit":
+            tram_route = calculate_tram_route((start_lat, start_lng), (end_lat, end_lng))
+            if not tram_route or 'duration' not in tram_route or not tram_route.get('legs'):
+                raise HTTPException(status_code=500, detail="Failed to calculate tram route")
+            
+            return extract_tram_route(tram_route)
 
         # Standard routing for walking/cycling/driving
         # Load GeoJSON data for routing
@@ -168,7 +258,7 @@ async def optimize_route(
         
         if transport_mode == "transit":
             # For transit mode, add the transport data
-            transport_file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble.geojson")
+            transport_file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble_formate.geojson")
             with open(transport_file_path, 'r') as file:
                 transport_data = json.load(file)
                 # Combine relevant features
@@ -176,7 +266,7 @@ async def optimize_route(
                                         if f.get("geometry", {}).get("type") == "LineString"])
         
         # Create a graph for routing
-        G = nx.Graph()
+        G = nx.DiGraph() if transport_mode == "driving" else nx.Graph()
         
         # Add nodes and edges from filtered features
         for feature in geo_data["features"]:
@@ -188,6 +278,7 @@ async def optimize_route(
                     continue
                 
                 coords = feature["geometry"]["coordinates"]
+                one_way = feature.get("properties", {}).get("oneway") == "yes"
                 
                 # Add nodes and edges to the graph
                 for i in range(len(coords) - 1):
@@ -195,21 +286,23 @@ async def optimize_route(
                     node2 = tuple(coords[i + 1])
                     
                     # Calculate distance between nodes
-                    dist = math.sqrt((node1[0] - node2[0])**2 + (node1[1] - node2[1])**2)
+                    dist = calculate_distance(node1[1], node1[0], node2[1], node2[0])
                     
                     # Add nodes and edge to the graph
                     G.add_node(node1, pos=node1)
                     G.add_node(node2, pos=node2)
                     G.add_edge(node1, node2, weight=dist)
+                    
+                    # If it's a one-way street, do not add the reverse edge
+                    if not one_way:
+                        G.add_edge(node2, node1, weight=dist)
 
         # Find the closest nodes to start and end points
         start_point = (start_lng, start_lat)
         end_point = (end_lng, end_lat)
         
-        closest_start = min(G.nodes, key=lambda node: math.sqrt((node[0] - start_point[0])**2 + 
-                                                             (node[1] - start_point[1])**2))
-        closest_end = min(G.nodes, key=lambda node: math.sqrt((node[0] - end_point[0])**2 + 
-                                                           (node[1] - end_point[1])**2))
+        closest_start = min(G.nodes, key=lambda node: calculate_distance(node[1], node[0], start_lat, start_lng))
+        closest_end = min(G.nodes, key=lambda node: calculate_distance(node[1], node[0], end_lat, end_lng))
         
         # Calculate shortest path using Dijkstra's algorithm
         try:
@@ -235,9 +328,6 @@ async def optimize_route(
         for i in range(len(path) - 1):
             distance += G.edges[path[i], path[i + 1]]['weight']
         
-        # Convert to kilometers (rough approximation)
-        distance = distance * 111  # 1 degree is roughly 111 km
-        
         # Calculate duration based on transport mode
         speeds = {
             "walking": 5,
@@ -247,6 +337,22 @@ async def optimize_route(
         }
         speed = speeds.get(transport_mode, 5)
         duration = (distance / speed) * 60 * 60  # Duration in seconds
+        
+        # Handle walking to the nearest road for driving mode
+        if transport_mode == "driving":
+            walking_distance = calculate_distance(start_lat, start_lng, closest_start[1], closest_start[0])
+            walking_duration = (walking_distance / 5) * 60 * 60  # 5 km/h walking speed
+            duration += walking_duration
+            distance += walking_distance
+        
+        # Handle walking to the nearest tram stop for tram mode
+        if transport_mode == "transit":
+            tram_stops = [node for node in G.nodes if G.nodes[node].get("type") == "tram_stop"]
+            closest_tram_stop = min(tram_stops, key=lambda node: calculate_distance(node[1], node[0], start_lat, start_lng))
+            walking_distance = calculate_distance(start_lat, start_lng, closest_tram_stop[1], closest_tram_stop[0])
+            walking_duration = (walking_distance / 5) * 60 * 60  # 5 km/h walking speed
+            duration += walking_duration
+            distance += walking_distance
         
         return {
             "route": route_points,
@@ -260,344 +366,17 @@ async def optimize_route(
         print(f"Error in optimize_route: {e}\n{error_details}")
         raise HTTPException(status_code=500, detail=f"Failed to optimize route: {str(e)}")
 
-async def optimize_transit_route(start_lat, start_lng, end_lat, end_lng):
-    """Find optimal route using public transit, including walking to/from stops and transfers"""
+@app.post("/generate_qr")
+async def generate_qr(route: str):
+    """Generate a QR code for the given route"""
     try:
-        # Load transport data
-        transport_file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble.geojson")
-        with open(transport_file_path, 'r') as file:
-            transport_data = json.load(file)
-        
-        # Load walking paths
-        walking_file_path = os.path.join(BASE_DIR, "grenoble.geojson")
-        with open(walking_file_path, 'r') as file:
-            walking_data = json.load(file)
-        
-        # Extract transport stops and lines
-        stops = []
-        transport_lines = []
-        
-        for feature in transport_data["features"]:
-            if feature.get("geometry", {}).get("type") == "Point" and feature.get("properties", {}).get("public_transport") == "stop_position":
-                # This is a transport stop
-                coords = feature["geometry"]["coordinates"]
-                stops.append({
-                    "id": feature["properties"].get("ref", f"stop_{len(stops)}"),
-                    "name": feature["properties"].get("name", "Unnamed Stop"),
-                    "lng": coords[0],
-                    "lat": coords[1],
-                    "type": "tram" if feature["properties"].get("tram") == "yes" else 
-                          ("bus" if feature["properties"].get("bus") == "yes" else "transport")
-                })
-            elif feature.get("geometry", {}).get("type") == "LineString":
-                # This is a transport line
-                transport_lines.append({
-                    "id": feature["properties"].get("id", f"line_{len(transport_lines)}"),
-                    "name": feature["properties"].get("name", "Unnamed Line"),
-                    "type": feature["properties"].get("route_type", "unknown"),
-                    "coords": feature["geometry"]["coordinates"]
-                })
-        
-        # Find stops near start point (max 500m)
-        start_point = (start_lng, start_lat)
-        MAX_WALKING_DISTANCE = 0.005  # ~500m in coordinate units
-        
-        start_stops = []
-        for stop in stops:
-            dist = ((stop["lng"] - start_point[0])**2 + (stop["lat"] - start_point[1])**2)**0.5
-            if dist <= MAX_WALKING_DISTANCE:
-                start_stops.append({**stop, "distance": dist * 111000})  # approx distance in meters
-        
-        # Find stops near end point
-        end_point = (end_lng, end_lat)
-        end_stops = []
-        for stop in stops:
-            dist = ((stop["lng"] - end_point[0])**2 + (stop["lat"] - end_point[1])**2)**0.5
-            if dist <= MAX_WALKING_DISTANCE:
-                end_stops.append({**stop, "distance": dist * 111000})
-        
-        # If no nearby stops are found, fall back to walking route
-        if not start_stops or not end_stops:
-            print("No transit stops found nearby. Falling back to walking route.")
-            return await optimize_walking_route(start_lat, start_lng, end_lat, end_lng)
-        
-        # For simplicity, use the closest stop at each end for now
-        # In a full solution, you'd search multiple possibilities
-        closest_start_stop = min(start_stops, key=lambda x: x["distance"])
-        closest_end_stop = min(end_stops, key=lambda x: x["distance"])
-        
-        # Create a graph for transport network
-        G = nx.Graph()
-        
-        # Add walking edges to the graph (simplified for this example)
-        add_walking_edges_to_graph(G, walking_data, stops)
-        
-        # Add transit line edges
-        for line in transport_lines:
-            coords = line["coords"]
-            line_type = line["type"]
-            
-            # Speed multipliers based on transport type
-            speed_multiplier = 3 if line_type == "tram" else 2  # Tram faster than bus
-            
-            # Find stops along this line
-            line_stops = []
-            for stop in stops:
-                # Check if stop is near any point on the line
-                for coord in coords:
-                    if ((stop["lng"] - coord[0])**2 + (stop["lat"] - coord[1])**2)**0.5 <= 0.0001:
-                        line_stops.append(stop)
-                        break
-            
-            # Add edges between consecutive stops on the line
-            for i in range(len(line_stops) - 1):
-                stop1 = line_stops[i]
-                stop2 = line_stops[i + 1]
-                stop1_id = f"stop_{stop1['id']}"
-                stop2_id = f"stop_{stop2['id']}"
-                
-                # Calculate distance (rough approximation)
-                dist = ((stop1["lng"] - stop2["lng"])**2 + (stop1["lat"] - stop2["lat"])**2)**0.5 * 111  # km
-                
-                # Add both stops to graph if not already there
-                if not G.has_node(stop1_id):
-                    G.add_node(stop1_id, pos=(stop1["lng"], stop1["lat"]), type="stop", name=stop1["name"])
-                
-                if not G.has_node(stop2_id):
-                    G.add_node(stop2_id, pos=(stop2["lng"], stop2["lat"]), type="stop", name=stop2["name"])
-                
-                # Add edge between stops with transit type and faster speed
-                G.add_edge(
-                    stop1_id, stop2_id,
-                    weight=dist / speed_multiplier,  # Less weight = faster travel
-                    type=line_type,
-                    line_name=line["name"]
-                )
-        
-        # Add start and end points to the graph
-        start_node = "start"
-        end_node = "end"
-        G.add_node(start_node, pos=start_point, type="point")
-        G.add_node(end_node, pos=end_point, type="point")
-        
-        # Add walking edges from start point to nearby stops
-        for stop in start_stops:
-            stop_id = f"stop_{stop['id']}"
-            if not G.has_node(stop_id):
-                G.add_node(stop_id, pos=(stop["lng"], stop["lat"]), type="stop", name=stop["name"])
-            
-            G.add_edge(
-                start_node, stop_id,
-                weight=stop["distance"] / 1000 / 5,  # 5 km/h walking
-                type="walking",
-                line_name=None
-            )
-        
-        # Add walking edges from nearby stops to end point
-        for stop in end_stops:
-            stop_id = f"stop_{stop['id']}"
-            if not G.has_node(stop_id):
-                G.add_node(stop_id, pos=(stop["lng"], stop["lat"]), type="stop", name=stop["name"])
-            
-            G.add_edge(
-                stop_id, end_node,
-                weight=stop["distance"] / 1000 / 5,  # 5 km/h walking
-                type="walking",
-                line_name=None
-            )
-        
-        # Find the shortest path
-        try:
-            path = nx.shortest_path(G, source=start_node, target=end_node, weight='weight')
-        except nx.NetworkXNoPath:
-            # If no path found, fall back to direct walking
-            print("No transit path found. Falling back to walking route.")
-            return await optimize_walking_route(start_lat, start_lng, end_lat, end_lng)
-        
-        # Extract route information
-        route_points = []
-        segments = []
-        total_distance = 0
-        current_segment_type = None
-        current_segment_name = None
-        current_segment_points = []
-        
-        for i in range(len(path) - 1):
-            node1 = path[i]
-            node2 = path[i + 1]
-            edge_data = G.get_edge_data(node1, node2)
-            
-            # Add intermediate points if needed for better visualization
-            pos1 = G.nodes[node1]["pos"]
-            pos2 = G.nodes[node2]["pos"]
-            
-            # Add first point
-            if i == 0:
-                route_points.append({"lat": start_lat, "lng": start_lng})
-                current_segment_points.append({"lat": start_lat, "lng": start_lng})
-            
-            # Check if this is a new segment type
-            new_segment_type = edge_data["type"]
-            new_segment_name = edge_data.get("line_name")
-            
-            if new_segment_type != current_segment_type or new_segment_name != current_segment_name:
-                # Save previous segment if it exists
-                if current_segment_type is not None:
-                    segments.append({
-                        "type": current_segment_type,
-                        "line_name": current_segment_name,
-                        "points": current_segment_points
-                    })
-                
-                # Start new segment
-                current_segment_type = new_segment_type
-                current_segment_name = new_segment_name
-                current_segment_points = [{"lat": G.nodes[node1]["pos"][1], "lng": G.nodes[node1]["pos"][0]}]
-            
-            # Add intermediate point
-            current_segment_points.append({"lat": G.nodes[node2]["pos"][1], "lng": G.nodes[node2]["pos"][0]})
-            
-            # Add to main route points
-            route_points.append({"lat": G.nodes[node2]["pos"][1], "lng": G.nodes[node2]["pos"][0]})
-            
-            # Add the distance
-            total_distance += edge_data["weight"] * (5 if edge_data["type"] == "walking" else 
-                                                   20 if edge_data["type"] == "bus" else 
-                                                   35 if edge_data["type"] == "tram" else 15)
-        
-        # Add the final segment
-        if current_segment_type is not None:
-            segments.append({
-                "type": current_segment_type,
-                "line_name": current_segment_name,
-                "points": current_segment_points
-            })
-        
-        # Make sure we end at the exact destination
-        if route_points[-1]["lat"] != end_lat or route_points[-1]["lng"] != end_lng:
-            route_points.append({"lat": end_lat, "lng": end_lng})
-            if segments and segments[-1]["type"] == "walking":
-                segments[-1]["points"].append({"lat": end_lat, "lng": end_lng})
-        
-        # Calculate duration based on segments
-        duration = 0
-        for segment in segments:
-            segment_distance = 0
-            points = segment["points"]
-            for i in range(len(points) - 1):
-                p1 = points[i]
-                p2 = points[i + 1]
-                segment_distance += ((p1["lng"] - p2["lng"])**2 + (p1["lat"] - p2["lat"])**2)**0.5 * 111  # km
-            
-            # Calculate time based on transport type
-            speed = 5 if segment["type"] == "walking" else 20 if segment["type"] == "bus" else 35  # km/h
-            segment_duration = (segment_distance / speed) * 60 * 60  # seconds
-            duration += segment_duration
-            
-            # Add waiting time for transit (approx. 5 minutes)
-            if segment["type"] != "walking":
-                duration += 300  # 5 minutes in seconds
-        
-        return {
-            "route": route_points,
-            "segments": segments,
-            "distance": round(total_distance, 2),
-            "duration": round(duration),
-            "transport_mode": "transit"
-        }
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Error in optimize_transit_route: {e}\n{error_details}")
-        raise HTTPException(status_code=500, detail=f"Failed to optimize transit route: {str(e)}")
-
-async def optimize_walking_route(start_lat, start_lng, end_lat, end_lng):
-    """Fallback to pure walking route"""
-    # This is a simplified version - you can copy the regular walking route logic here
-    try:
-        # Create a direct path with a few intermediate points
-        num_points = 5
-        route_points = []
-        
-        for i in range(num_points + 1):
-            ratio = i / num_points
-            lat = float(start_lat) + (float(end_lat) - float(start_lat)) * ratio
-            lng = float(start_lng) + (float(end_lng) - float(start_lng)) * ratio
-            
-            route_points.append({"lat": lat, "lng": lng})
-        
-        # Calculate distance using haversine formula
-        from math import sqrt, sin, cos, atan2, radians
-        
-        def haversine_distance(lat1, lon1, lat2, lon2):
-            R = 6371.0  # Earth radius in km
-            lat1_rad = radians(float(lat1))
-            lon1_rad = radians(float(lon1))
-            lat2_rad = radians(float(lat2))
-            lon2_rad = radians(float(lon2))
-            dlon = lon2_rad - lon1_rad
-            dlat = lat2_rad - lat1_rad
-            a = sin(dlat / 2)**2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)**2
-            c = 2 * atan2(sqrt(a), sqrt(1 - a))
-            distance = R * c
-            return distance
-        
-        distance = haversine_distance(start_lat, start_lng, end_lat, end_lng)
-        duration = (distance / 5) * 60 * 60  # 5 km/h walking speed
-        
-        return {
-            "route": route_points,
-            "segments": [{
-                "type": "walking",
-                "line_name": None,
-                "points": route_points
-            }],
-            "distance": round(distance, 2),
-            "duration": round(duration),
-            "transport_mode": "walking"
-        }
+        img = qrcode.make(route)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return StreamingResponse(buf, media_type="image/png")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-def add_walking_edges_to_graph(G, walking_data, stops):
-    """Add walking paths between nearby stops to the graph"""
-    # This is a simplified implementation - for a real app, you'd use a more complete walking network
-    
-    # Create a small walking network around each stop
-    WALKING_RADIUS = 0.001  # approx. 100m radius
-    
-    # Connect nearby stops with walking edges
-    for i in range(len(stops)):
-        stop1 = stops[i]
-        stop1_id = f"stop_{stop1['id']}"
-        
-        for j in range(i+1, len(stops)):
-            stop2 = stops[j]
-            stop2_id = f"stop_{stop2['id']}"
-            
-            # Calculate distance
-            dist = ((stop1["lng"] - stop2["lng"])**2 + (stop1["lat"] - stop2["lat"])**2)**0.5
-            
-            # If stops are close enough for walking, connect them
-            if dist <= WALKING_RADIUS:
-                # Add both stops to graph if not already there
-                if not G.has_node(stop1_id):
-                    G.add_node(stop1_id, pos=(stop1["lng"], stop1["lat"]), type="stop", name=stop1["name"])
-                
-                if not G.has_node(stop2_id):
-                    G.add_node(stop2_id, pos=(stop2["lng"], stop2["lat"]), type="stop", name=stop2["name"])
-                
-                # Calculate walking time (5 km/h)
-                walking_distance = dist * 111  # km
-                walking_time = walking_distance / 5  # hours
-                
-                # Add walking edge
-                G.add_edge(
-                    stop1_id, stop2_id,
-                    weight=walking_time,
-                    type="walking",
-                    line_name=None
-                )
 
 if __name__ == "__main__":
     import uvicorn

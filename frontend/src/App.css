@@ -6,175 +6,265 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
 }
 
 .App {
-  text-align: center;
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .App-header {
-  background-color: #2c3e50;
-  padding: 10px 0;
-  color: white;
+  background-color: var(--header-bg-color);
+  padding: 0 20px;
+  color: var(--header-text-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  z-index: 1200;
+  position: relative;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: var(--header-text-color);
+  font-size: 20px;
+  cursor: pointer;
+  margin-right: 15px;
+  padding: 5px;
 }
 
 .App-header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.mode-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--header-text-color);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.mode-toggle-btn:hover {
+  background-color: rgba(255,255,255,0.1);
 }
 
 .App-content {
   display: flex;
   flex: 1;
+  position: relative; /* Permet le positionnement absolu des enfants */
   overflow: hidden;
 }
 
 .map-container {
-  flex: 1;
-  position: relative;
-}
-
-.route-optimizer {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 15px;
-  z-index: 1000;
-  width: 280px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%; /* Assure que la carte occupe tout l'espace disponible */
+  height: calc(100vh - 60px);
+  z-index: 900;
 }
 
-.route-optimizer h3 {
-  margin-top: 0;
-  font-size: 16px;
-  color: #333;
-  margin-bottom: 12px;
-}
-
-.form-group {
-  margin-bottom: 12px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  font-size: 14px;
-  color: #555;
-}
-
-.form-group input,
-.form-group select {
+/* Assurer que les tuiles Leaflet sont bien derrière la sidebar */
+.leaflet-container {
+  z-index: 900;
+  position: absolute;
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-bottom: 5px;
+  height: 100%;
 }
 
-.form-group input[name="startLat"],
-.form-group input[name="startLng"],
-.form-group input[name="endLat"],
-.form-group input[name="endLng"] {
-  width: calc(50% - 5px);
-  display: inline-block;
+.leaflet-control-container {
+  z-index: 950;
 }
 
-.form-group input[name="startLng"],
-.form-group input[name="endLng"] {
-  margin-left: 5px;
+.map-controls {
+  display: none;
 }
 
-.route-optimizer button {
-  width: 100%;
-  padding: 10px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.route-optimizer button:hover {
-  background-color: #2980b9;
-}
-
-.reset-route-btn {
-  width: 100%;
-  padding: 8px;
-  background-color: #f44336;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-top: 10px;
-}
-
-.reset-route-btn:hover {
-  background-color: #d32f2f;
-}
-
-.popup-content h3 {
-  margin-top: 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.popup-content p {
-  margin: 5px 0;
-  font-size: 14px;
-}
-
-.input-type-toggle {
+.loading-overlay, .error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  margin-bottom: 15px;
-  border-radius: 4px;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255,255,255,0.8);
+  z-index: 1100;
+  font-size: 18px;
+  font-weight: 500;
 }
 
-.toggle-btn {
-  flex: 1;
-  background-color: #f0f0f0;
-  border: 1px solid #ccc;
-  padding: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-size: 14px;
-}
-
-.toggle-btn:first-child {
-  border-right: none;
-  border-top-left-radius: 4px;
-  border-bottom-left-radius: 4px;
-}
-
-.toggle-btn:last-child {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
-}
-
-.toggle-btn.active {
-  background-color: #3498db;
+.dark-mode .loading-overlay, .dark-mode .error-overlay {
+  background-color: rgba(0,0,0,0.8);
   color: white;
-  border-color: #3498db;
 }
 
-.calculating {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.error-message {
+.error-overlay {
   color: #e74c3c;
-  margin-top: 10px;
-  font-size: 14px;
-  text-align: center;
+}
+
+/* Dark map styles */
+.dark-map .leaflet-tile-pane {
+  filter: brightness(0.8);
+}
+
+/* Light mode variables */
+.light-mode {
+  --header-bg-color: #2c3e50;
+  --header-text-color: white;
+  --sidebar-bg-color: #f9f9f9;
+  --sidebar-text-color: #333;
+  --section-header-color: #555;
+  --button-bg-color: #3498db;
+  --button-text-color: white;
+  --button-hover-bg-color: #2980b9;
+  --toggle-bg-color: #f0f0f0;
+  --toggle-border-color: #ccc;
+  --toggle-active-bg-color: #3498db;
+  --toggle-active-text-color: white;
+  --toggle-active-border-color: #3498db;
+  --label-color: #555;
+  --input-border-color: #ddd;
+  --input-bg-color: white;
+  --input-text-color: #333;
+  --button-active-light-bg: #2980b9;
+  --button-active-dark-bg: #1abc9c;
+}
+
+/* Dark mode variables */
+.dark-mode {
+  --header-bg-color: #1a1a1a;
+  --header-text-color: #f0f0f0;
+  --sidebar-bg-color: #333;
+  --sidebar-text-color: #f0f0f0;
+  --section-header-color: #ddd;
+  --button-bg-color: #1abc9c;
+  --button-text-color: #f0f0f0;
+  --button-hover-bg-color: #16a085;
+  --toggle-bg-color: #444;
+  --toggle-border-color: #555;
+  --toggle-active-bg-color: #555;
+  --toggle-active-text-color: #f0f0f0;
+  --toggle-active-border-color: #555;
+  --label-color: #ddd;
+  --input-border-color: #555;
+  --input-bg-color: #444;
+  --input-text-color: #f0f0f0;
+}
+
+/* Résoudre le problème de bord blanc en mode sombre */
+.dark-mode .sidebar {
+  outline: none;
+  border-color: var(--sidebar-bg-color);
+}
+
+/* Make sidebar responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 1100;
+    width: 85%;
+    max-width: 300px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar.visible {
+    transform: translateX(0);
+  }
+}
+
+.bottom-controls {
+  position: fixed;
+  bottom: 30px; /* Increased slightly to match the sidebar spacing */
+  left: 340px; /* Ajusté pour s'aligner avec la sidebar flottante */
+  display: flex;
+  gap: 10px;
+  z-index: 1001;
+  transition: left 0.3s ease;
+  padding: 14px 18px;
+  background-color: var(--sidebar-bg-color);
+  border-radius: 30px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* When sidebar is hidden */
+.bottom-controls.sidebar-hidden {
+  left: 20px;
+}
+
+/* When sidebar is hidden */
+.App-content:not(:has(.sidebar)) .bottom-controls {
+  left: 20px;
+}
+
+.bottom-controls .control-btn {
+  width: 40px;
+  height: 40px;
+  background-color: white;
+  border: none;
+  /* Arrondir complètement en cercle */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .bottom-controls .control-btn {
+  background-color: #333;
+  color: white;
+}
+
+.bottom-controls .control-btn.active {
+  background-color: var(--button-bg-color);
+  color: white;
+  /* Effet léger de déplacement vers le haut quand actif */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.bottom-controls .control-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Handle responsive layout */
+@media (max-width: 768px) {
+  .bottom-controls {
+    left: 20px;
+    bottom: 20px;
+  }
+}
+
+/* Ajuster également les panels d'information pour qu'ils flottent */
+.transport-info-container,
+.route-details-container {
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
