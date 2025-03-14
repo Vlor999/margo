@@ -1,0 +1,76 @@
+.transport-info-container {
+  position: absolute;
+  right: 20px;
+  top: 100px;
+  width: 350px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.transport-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #2c3e50;
+  color: white;
+}
+
+.transport-info-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.transport-info-content {
+  padding: 15px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.schedules-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.schedules-table th, .schedules-table td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.schedules-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+  color: #333;
+}
+
+.schedules-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.schedule-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.schedule-btn:hover {
+  background-color: #2980b9;
+}

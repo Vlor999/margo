@@ -1,0 +1,7 @@
+fastapi==0.85.0
+uvicorn==0.18.3
+requests==2.28.1
+python-dotenv==0.21.0
+geojson==2.5.0
+shapely==1.8.4
+networkx==2.8.7
