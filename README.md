@@ -38,6 +38,12 @@ grenoble-transport-map/
 
 ## Setup Instructions
 
+### Init things:
+1. Clone the repository
+   ```bash
+   git clone git@github.com:Vlor999/margo.git # SSH
+   ```
+
 ### Backend Setup
 
 1. Navigate to the backend directory:
@@ -138,4 +144,4 @@ Le jeu serait :
 - A l'échéance : nous pouvons voter pour la meilleur photo.
 - Celle ou celui qui gagne et bien gagne, je n'ai pas d'idee de gain
 
-Apres j'avoue petit porbleme de temps du fait que je sois tout seul
+Apres j'avoue petit porbleme de temps du fait que je sois tout seul.
