@@ -1,5 +1,5 @@
 .sidebar {
-  width: 300px;
+  width: 270px;
   background-color: var(--sidebar-bg-color);
   color: var(--sidebar-text-color);
   padding: 0;
@@ -7,18 +7,15 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  /* Remove fixed height and use top/bottom positioning instead */
   height: auto;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 170px); /* Réduit la hauteur pour laisser de l'espace aux boutons */
   z-index: 1000;
-  /* Arrondir TOUS les coins */
-  border-radius: 20px;
-  /* Position pour flotter au-dessus de la carte */
+  /* Harmonisation du border-radius avec la barre de contrôle */
+  border-radius: 30px;
   position: absolute;
-  left: 20px; /* Décollage de la gauche */
-  top: 80px; /* Espace en-dessous du header */
-  bottom: 20px; /* Espace en bas */
-  /* Effet de flottement */
+  left: 20px;
+  top: 80px;
+  bottom: 100px; /* Augmenté pour rendre la sidebar plus petite en hauteur */
   backdrop-filter: blur(2px);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -36,7 +33,7 @@
 }
 
 .sidebar-content {
-  padding: 20px;
+  padding: 15px; /* Réduit de 20px à 15px */
   flex: 1;
   overflow-y: auto;
 }
@@ -49,7 +46,7 @@
 .sidebar-tab {
   flex: 1;
   text-align: center;
-  padding: 15px 0;
+  padding: 12px 0; /* Réduit de 15px à 12px */
   cursor: pointer;
   font-weight: 500;
   color: var(--sidebar-text-color);
@@ -71,27 +68,27 @@
 }
 
 .filter-section, .route-optimizer {
-  margin-bottom: 24px;
+  margin-bottom: 18px; /* Réduit de 24px à 18px */
   background-color: var(--sidebar-bg-color);
   /* Arrondir les coins des sections */
   border-radius: 16px;
-  padding: 15px;
+  padding: 12px; /* Réduit de 15px à 12px */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .filter-section h3, .route-optimizer h3 {
   margin-top: 0;
-  font-size: 16px;
+  font-size: 15px; /* Réduit de 16px à 15px */
   color: var(--section-header-color);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--toggle-border-color);
-  margin-bottom: 15px;
+  margin-bottom: 12px; /* Réduit de 15px à 12px */
 }
 
 .filter-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px; /* Réduit de 10px à 8px */
 }
 
 .filter-options label {
@@ -99,7 +96,7 @@
   align-items: center;
   cursor: pointer;
   margin: 0;
-  font-size: 14px;
+  font-size: 13px; /* Réduit de 14px à 13px */
 }
 
 .filter-options input[type="checkbox"] {
@@ -126,7 +123,7 @@
 }
 
 .apply-btn, .reset-btn, .reset-route-btn {
-  padding: 10px 15px;
+  padding: 8px 12px; /* Réduit de 10px 15px à 8px 12px */
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
@@ -160,29 +157,30 @@
 }
 
 .route-optimizer .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 12px; /* Réduit de 16px à 12px */
 }
 
 .route-optimizer .form-group label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px; /* Réduit de 8px à 6px */
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px; /* Réduit de 14px à 13px */
   color: var(--label-color);
 }
 
 .route-optimizer .form-group input,
 .route-optimizer .form-group select {
   width: 100%;
-  padding: 12px;
+  padding: 10px; /* Réduit de 12px à 10px */
   border: 1px solid var(--input-border-color);
   /* Arrondir davantage les coins des inputs et selects */
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px; /* Réduit de 14px à 13px */
   background-color: var(--input-bg-color);
   color: var(--input-text-color);
   outline: none;
   transition: border-color 0.2s;
+  box-sizing: border-box; /* Cruciale pour inclure padding/border dans la largeur */
 }
 
 .route-optimizer .form-group input:focus,
@@ -196,6 +194,8 @@
 .route-optimizer .form-group input[name="endLng"] {
   width: calc(50% - 5px);
   display: inline-block;
+  box-sizing: border-box; /* Garantit que le calcul de largeur inclut padding et border */
+  margin-right: 0; /* Supprimer les marges par défaut */
 }
 
 .route-optimizer .form-group input[name="startLng"],
@@ -204,12 +204,12 @@
 }
 
 .route-optimizer .form-actions {
-  margin-top: 25px;
+  margin-top: 20px; /* Réduit de 25px à 20px */
 }
 
 .route-optimizer button {
   width: 100%;
-  padding: 12px;
+  padding: 10px; /* Réduit de 12px à 10px */
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
@@ -243,7 +243,7 @@
 
 .input-type-toggle {
   display: flex;
-  margin-bottom: 18px;
+  margin-bottom: 15px; /* Réduit de 18px à 15px */
   /* Arrondir davantage les coins du groupe de toggle */
   border-radius: 20px;
   overflow: hidden;
@@ -369,4 +369,10 @@
 /* Style pour le select en dark mode */
 .dark-mode .route-optimizer .form-group select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ccc' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
+}
+
+/* Fix pour les inputs d'adresse pour qu'ils restent centrés dans leur conteneur */
+.route-optimizer .form-group input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
 }

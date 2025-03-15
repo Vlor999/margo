@@ -60,37 +60,39 @@ function App() {
         />
         
         {sidebarVisible && (
-          <Sidebar 
-            onFilterChange={handleFilterChange} 
-            routeDetails={optimizedRoute} 
-            setOptimizedRoute={setOptimizedRoute} 
-          />
+          <>
+            <Sidebar 
+              onFilterChange={handleFilterChange} 
+              routeDetails={optimizedRoute} 
+              setOptimizedRoute={setOptimizedRoute} 
+            />
+            
+            {/* Map controls placed directly below the sidebar */}
+            <div className={`bottom-controls ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
+              <button 
+                className={`control-btn ${mapLayer === 'standard' ? 'active' : ''}`} 
+                onClick={() => setMapLayer('standard')}
+                title="Standard view"
+              >
+                <i className="fa fa-map"></i>
+              </button>
+              <button 
+                className={`control-btn ${mapLayer === 'satellite' ? 'active' : ''}`} 
+                onClick={() => setMapLayer('satellite')}
+                title="Satellite view"
+              >
+                <i className="fa fa-globe"></i>
+              </button>
+              <button 
+                className={`control-btn ${showBackgroundRoutes ? 'active' : ''}`} 
+                onClick={() => setShowBackgroundRoutes(!showBackgroundRoutes)}
+                title={showBackgroundRoutes ? "Hide routes" : "Show routes"}
+              >
+                <i className="fa fa-road"></i>
+              </button>
+            </div>
+          </>
         )}
-        
-        {/* Map controls now placed at the bottom next to sidebar, with adjusted class for sidebar visibility */}
-        <div className={`bottom-controls ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
-          <button 
-            className={`control-btn ${mapLayer === 'standard' ? 'active' : ''}`} 
-            onClick={() => setMapLayer('standard')}
-            title="Standard view"
-          >
-            <i className="fa fa-map"></i>
-          </button>
-          <button 
-            className={`control-btn ${mapLayer === 'satellite' ? 'active' : ''}`} 
-            onClick={() => setMapLayer('satellite')}
-            title="Satellite view"
-          >
-            <i className="fa fa-globe"></i>
-          </button>
-          <button 
-            className={`control-btn ${showBackgroundRoutes ? 'active' : ''}`} 
-            onClick={() => setShowBackgroundRoutes(!showBackgroundRoutes)}
-            title={showBackgroundRoutes ? "Hide routes" : "Show routes"}
-          >
-            <i className="fa fa-road"></i>
-          </button>
-        </div>
       </div>
     </div>
   );

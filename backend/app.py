@@ -141,73 +141,140 @@ def extract_tram_route(tram_route):
     """Extract route points and other details from the tram route"""
     route_points = []
     segments = []
-    total_distance = tram_route["walkDistance"] / 1000  # Convert meters to kilometers
-    duration = tram_route['duration']
+    total_distance = tram_route.get("walkDistance", 0) / 1000  # Convert meters to kilometers
+    duration = tram_route.get('duration', 0)
     
-    for key in tram_route:
-        if key == 'legs':
-            for elem in tram_route['legs']:
-                mode = elem['mode']
-                if mode == 'WALK':
-                    # Walking segment
-                    segment_points = [{"lat": elem['from']['lat'], "lng": elem['from']['lon']}]
-                    for step in elem.get('steps', []):
+    # Extraire les noms de rues pour les renvoyer au frontend
+    street_names = []
+    street_destinations = []
+    
+    # Nouvelle liste pour les instructions détaillées pas à pas
+    detailed_instructions = []
+    
+    if 'legs' in tram_route:
+        for elem in tram_route['legs']:
+            mode = elem.get('mode', '')
+            from_stop = elem.get('from', {})
+            to_stop = elem.get('to', {})
+            
+            # Ajouter les noms des arrêts comme noms de rues pour le contexte
+            street_name = from_stop.get('name', 'Arrêt inconnu')
+            street_names.append(street_name)
+            street_destinations.append(to_stop.get('name', 'Destination inconnue'))
+            
+            # Extraire les instructions détaillées de navigation
+            if 'steps' in elem:
+                for step in elem['steps']:
+                    if 'streetName' in step and 'relativeDirection' in step:
+                        instruction = {
+                            "distance": step.get('distance', 0) / 1000,  # Convert to km
+                            "relativeDirection": step.get('relativeDirection', ''),
+                            "absoluteDirection": step.get('absoluteDirection', ''),
+                            "streetName": step.get('streetName', ''),
+                            "legType": mode
+                        }
+                        detailed_instructions.append(instruction)
+            
+            if mode == 'WALK':
+                # Walking segment
+                segment_points = []
+                if 'from' in elem:
+                    segment_points.append({"lat": elem['from']['lat'], "lng": elem['from']['lon']})
+                
+                for step in elem.get('steps', []):
+                    if 'lat' in step and 'lon' in step:
                         segment_points.append({"lat": step['lat'], "lng": step['lon']})
+                
+                if 'to' in elem:
                     segment_points.append({"lat": elem['to']['lat'], "lng": elem['to']['lon']})
-                    
+                
+                if len(segment_points) >= 2:  # Assurons-nous qu'il y a au moins 2 points
                     segments.append({
                         "type": "walking",
-                        "points": segment_points
+                        "points": segment_points,
+                        "from": from_stop.get('name'),
+                        "to": to_stop.get('name'),
+                        "duration": elem.get('duration', 0),
+                        "distance": elem.get('distance', 0) / 1000  # Convert to km
                     })
                     
                     route_points.extend(segment_points)
-                elif mode == 'TRAM':
-                    # Tram segment
-                    leg = elem['legGeometry']
-                    segment_points = [{"lat": elem['from']['lat'], "lng": elem['from']['lon']}]
-                    # Decode polyline points
-                    segment_points = []
-                    polyline = leg['points']
-                    index, lat, lng = 0, 0, 0
+                    
+            elif mode in ['TRAM', 'BUS', 'RAIL', 'SUBWAY']:
+                # Transit segment
+                segment_points = []
+                
+                # Ajouter le point de départ
+                if 'from' in elem:
+                    segment_points.append({"lat": elem['from']['lat'], "lng": elem['from']['lon']})
+                
+                # Décoder les points de géométrie si disponibles
+                try:
+                    polyline = elem['legGeometry']['points']
+                    lat, lng = 0, 0
+                    index = 0
+                    
                     while index < len(polyline):
-                        b, shift, result = 0, 0, 0
+                        # Décodage standard du format polyline de Google
+                        result = 1
+                        shift = 0
                         while True:
-                            b = ord(polyline[index]) - 63
+                            b = ord(polyline[index]) - 63 - 1
                             index += 1
-                            result |= (b & 0x1f) << shift
+                            result += b << shift
                             shift += 5
-                            if b < 0x20:
+                            if b < 0x1f:
                                 break
-                        dlat = ~(result >> 1) if (result & 1) else (result >> 1)
-                        lat += dlat
-
-                        shift, result = 0, 0
+                        lat += (~(result >> 1) if (result & 1) else (result >> 1))
+                        
+                        result = 1
+                        shift = 0
                         while True:
-                            b = ord(polyline[index]) - 63
+                            b = ord(polyline[index]) - 63 - 1
                             index += 1
-                            result |= (b & 0x1f) << shift
+                            result += b << shift
                             shift += 5
-                            if b < 0x20:
+                            if b < 0x1f:
                                 break
-                        dlng = ~(result >> 1) if (result & 1) else (result >> 1)
-                        lng += dlng
-
-                        segment_points.append({"lat": lat / 1e5, "lng": lng / 1e5})
+                        lng += (~(result >> 1) if (result & 1) else (result >> 1))
+                        
+                        segment_points.append({"lat": lat * 1e-5, "lng": lng * 1e-5})
+                except Exception as e:
+                    print(f"Error decoding polyline: {e}")
                 
-                segments.append({
-                    "type": "tram" if mode == 'TRAM' else "walking",
-                    "line_name": elem.get('routeShortName', 'Tram') if mode == 'TRAM' else None,
-                    "points": segment_points
-                })
+                # Ajouter le point d'arrivée
+                if 'to' in elem:
+                    segment_points.append({"lat": elem['to']['lat'], "lng": elem['to']['lon']})
                 
-                route_points.extend(segment_points)
+                if len(segment_points) >= 2:  # Assurons-nous qu'il y a au moins 2 points
+                    transit_type = mode.lower()
+                    segments.append({
+                        "type": transit_type,
+                        "line_name": elem.get('routeShortName', transit_type.capitalize()),
+                        "route_id": elem.get('routeId', ''),
+                        "points": segment_points,
+                        "from": from_stop.get('name'),
+                        "to": to_stop.get('name'),
+                        "duration": elem.get('duration', 0),
+                        "distance": elem.get('distance', 0) / 1000,  # Convert to km
+                        "headsign": elem.get('headsign', '')  # Direction du transport
+                    })
+                    
+                    route_points.extend(segment_points)
+    
+    # S'assurer qu'il y a suffisamment de noms de rues pour tous les points
+    while len(street_names) < len(route_points):
+        street_names.append("Rue non identifiée")
     
     return {
         "route": route_points,
         "segments": segments,
         "distance": round(total_distance, 2),
-        "duration": round(duration),  # Convert seconds to minutes
-        "transport_mode": "tram"
+        "duration": round(duration),
+        "transport_mode": "transit",
+        "streetNames": street_names,
+        "streetDestinations": street_destinations,
+        "detailed_instructions": detailed_instructions  # Nouvelles instructions détaillées
     }
 
 @app.get("/api/optimize")
@@ -234,15 +301,42 @@ async def optimize_route(
         if not all([start_lat, start_lng, end_lat, end_lng]):
             raise HTTPException(status_code=400, detail="Missing coordinates or addresses")
 
-        # Special case for tram mode using MTAG API
+        # Special case for transit mode using MTAG API
         if transport_mode == "tram" or transport_mode == "transit":
-            tram_route = calculate_tram_route((start_lat, start_lng), (end_lat, end_lng))
-            if not tram_route or 'duration' not in tram_route or not tram_route.get('legs'):
-                raise HTTPException(status_code=500, detail="Failed to calculate tram route")
-            
-            return extract_tram_route(tram_route)
+            try:
+                print(f"Calculating transit route from ({start_lat}, {start_lng}) to ({end_lat}, {end_lng})")
+                
+                # Call MTAG API for transit routing
+                tram_route = calculate_tram_route((start_lat, start_lng), (end_lat, end_lng))
+                
+                # Debug information
+                print(f"MTAG API response: {json.dumps(tram_route)[:200]}...")  # Print first 200 chars
+                
+                # Handle API errors
+                if not tram_route:
+                    print("No transit route returned by MTAG API")
+                    print("Falling back to walking route")
+                    transport_mode = "walking"  # Fall back to walking
+                elif 'error' in tram_route:
+                    print(f"MTAG API error: {tram_route['error']}")
+                    print("Falling back to walking route")
+                    transport_mode = "walking"  # Fall back to walking
+                elif 'duration' not in tram_route or not tram_route.get('legs'):
+                    print(f"Invalid MTAG API response: {tram_route}")
+                    print("Falling back to walking route")
+                    transport_mode = "walking"  # Fall back to walking
+                else:
+                    # We have a valid transit route from MTAG API
+                    result = extract_tram_route(tram_route)
+                    print(f"Successfully extracted transit route with {len(result['route'])} points and {len(result.get('segments', []))} segments")
+                    return result
+            except Exception as e:
+                print(f"Transit routing error with MTAG API: {e}")
+                print("Falling back to walking route")
+                transport_mode = "walking"  # Fall back to walking
 
-        # Standard routing for walking/cycling/driving
+        # If we reached here for transit mode, it means we're falling back to walking
+        # Continue with standard routing for walking/cycling/driving
         # Load GeoJSON data for routing
         file_path = os.path.join(BASE_DIR, "grenoble.geojson")
         with open(file_path, 'r') as file:
@@ -265,10 +359,11 @@ async def optimize_route(
                 geo_data["features"].extend([f for f in transport_data["features"] 
                                         if f.get("geometry", {}).get("type") == "LineString"])
         
-        # Create a graph for routing
+        # Create a graph for routing - always use DiGraph for driving to respect one-way streets
         G = nx.DiGraph() if transport_mode == "driving" else nx.Graph()
         
         # Add nodes and edges from filtered features
+        valid_features = []
         for feature in geo_data["features"]:
             if feature.get("geometry", {}).get("type") == "LineString":
                 highway_type = feature.get("properties", {}).get("highway")
@@ -277,58 +372,239 @@ async def optimize_route(
                 if transport_mode != "transit" and highway_type not in allowed_types[transport_mode]:
                     continue
                 
+                valid_features.append(feature)
                 coords = feature["geometry"]["coordinates"]
-                one_way = feature.get("properties", {}).get("oneway") == "yes"
                 
-                # Add nodes and edges to the graph
-                for i in range(len(coords) - 1):
-                    node1 = tuple(coords[i])
-                    node2 = tuple(coords[i + 1])
+                # Check if it's a one-way street
+                props = feature.get("properties", {})
+                one_way = props.get("oneway") == "yes"
+                
+                # For one-way streets, we need to check the direction
+                if one_way and transport_mode == "driving":
+                    # Some OSM data may have explicit direction tags
+                    oneway_direction = 1  # Default is forward direction (along the coordinates order)
                     
-                    # Calculate distance between nodes
-                    dist = calculate_distance(node1[1], node1[0], node2[1], node2[0])
+                    # Check if there's an explicit -1 direction tag
+                    if props.get("oneway") == "-1" or props.get("oneway") == "reverse":
+                        oneway_direction = -1
                     
-                    # Add nodes and edge to the graph
-                    G.add_node(node1, pos=node1)
-                    G.add_node(node2, pos=node2)
-                    G.add_edge(node1, node2, weight=dist)
-                    
-                    # If it's a one-way street, do not add the reverse edge
-                    if not one_way:
-                        G.add_edge(node2, node1, weight=dist)
+                    # Add nodes and edge to the graph in the correct direction
+                    for i in range(len(coords) - 1):
+                        node1 = tuple(coords[i])
+                        node2 = tuple(coords[i + 1])
+                        
+                        # Calculate distance between nodes
+                        dist = calculate_distance(node1[1], node1[0], node2[1], node2[0])
+                        
+                        G.add_node(node1, pos=node1)
+                        G.add_node(node2, pos=node2)
+                        
+                        # Add edge in correct direction
+                        if oneway_direction == 1:
+                            G.add_edge(node1, node2, weight=dist, oneway=True)
+                        else:
+                            G.add_edge(node2, node1, weight=dist, oneway=True)
+                else:
+                    # For two-way streets or non-driving modes
+                    for i in range(len(coords) - 1):
+                        node1 = tuple(coords[i])
+                        node2 = tuple(coords[i + 1])
+                        
+                        # Calculate distance between nodes
+                        dist = calculate_distance(node1[1], node1[0], node2[1], node2[0])
+                        
+                        # Add nodes and both directions to the graph
+                        G.add_node(node1, pos=node1)
+                        G.add_node(node2, pos=node2)
+                        G.add_edge(node1, node2, weight=dist)
+                        
+                        # For non-driving modes or two-way streets, add both directions
+                        if transport_mode != "driving" or not one_way:
+                            G.add_edge(node2, node1, weight=dist)
 
-        # Find the closest nodes to start and end points
-        start_point = (start_lng, start_lat)
-        end_point = (end_lng, end_lat)
+        print(f"Created graph with {len(G.nodes())} nodes and {len(G.edges())} edges")
         
-        closest_start = min(G.nodes, key=lambda node: calculate_distance(node[1], node[0], start_lat, start_lng))
-        closest_end = min(G.nodes, key=lambda node: calculate_distance(node[1], node[0], end_lat, end_lng))
+        # APPROCHE SIMPLIFIÉE: chercher directement les noeuds les plus proches dans le graphe
+        # sans passer par la recherche des routes les plus proches
         
-        # Calculate shortest path using Dijkstra's algorithm
+        # Récupérer tous les noeuds du graphe
+        all_nodes = list(G.nodes())
+        
+        if not all_nodes:
+            raise HTTPException(status_code=404, detail="Road network graph is empty")
+        
+        # Trouver les noeuds les plus proches pour le départ et l'arrivée
+        # Au lieu de prendre simplement le plus proche, on prend les 10 plus proches
+        # et on essaie de trouver une paire qui soit connectée dans le graphe
+        start_candidates = sorted(all_nodes, key=lambda node: 
+            calculate_distance(node[1], node[0], start_lat, start_lng))[:20]
+        
+        end_candidates = sorted(all_nodes, key=lambda node: 
+            calculate_distance(node[1], node[0], end_lat, end_lng))[:20]
+        
+        print(f"Found {len(start_candidates)} start candidates and {len(end_candidates)} end candidates")
+        
+        # On essaie de trouver un chemin valide entre les noeuds candidats
+        path_found = False
+        closest_start_node = start_candidates[0]  # Par défaut, on prend le plus proche
+        closest_end_node = end_candidates[0]  # Par défaut, on prend le plus proche
+        
+        for start_node in start_candidates:
+            for end_node in end_candidates:
+                try:
+                    # Vérifier si le chemin existe
+                    path = nx.shortest_path(G, source=start_node, target=end_node, weight='weight')
+                    print(f"Found valid path from {start_node} to {end_node} with {len(path)} nodes")
+                    closest_start_node = start_node
+                    closest_end_node = end_node
+                    path_found = True
+                    break
+                except (nx.NetworkXNoPath, nx.NodeNotFound):
+                    continue
+            
+            if path_found:
+                break
+        
+        # Calculer les distances
+        start_distance = calculate_distance(
+            closest_start_node[1], closest_start_node[0], start_lat, start_lng)
+        end_distance = calculate_distance(
+            closest_end_node[1], closest_end_node[0], end_lat, end_lng)
+        
+        print(f"Selected start node: {closest_start_node}, distance: {start_distance:.4f}km")
+        print(f"Selected end node: {closest_end_node}, distance: {end_distance:.4f}km")
+        
+        # Log information about the start and end nodes for debugging
+        if transport_mode == "driving":
+            print(f"Checking start node {closest_start_node} connections:")
+            print(f"- Outgoing edges: {len(list(G.out_edges(closest_start_node)))}")
+            print(f"- Incoming edges: {len(list(G.in_edges(closest_start_node)))}")
+            
+            print(f"Checking end node {closest_end_node} connections:")
+            print(f"- Outgoing edges: {len(list(G.out_edges(closest_end_node)))}")
+            print(f"- Incoming edges: {len(list(G.in_edges(closest_end_node)))}")
+        
+        # Calculer l'itinéraire le plus court ou créer un itinéraire direct si nécessaire
         try:
-            path = nx.shortest_path(G, source=closest_start, target=closest_end, weight='weight')
-        except nx.NetworkXNoPath:
-            # If no path found, create a direct path
-            path = [closest_start, closest_end]
+            path = nx.shortest_path(G, source=closest_start_node, target=closest_end_node, weight='weight')
+            print(f"Calculating path with {len(path)} nodes")
+            
+            # Vérifier que tous les segments du chemin existent bien dans le graphe
+            valid_path = True
+            for i in range(len(path) - 1):
+                if not G.has_edge(path[i], path[i + 1]):
+                    print(f"Edge {path[i]} -> {path[i + 1]} doesn't exist in graph")
+                    valid_path = False
+                    break
+            
+            if not valid_path:
+                print("Path contains edges that don't exist in the graph, creating direct route")
+                path = [closest_start_node, closest_end_node]
+                
+        except (nx.NetworkXNoPath, nx.NodeNotFound) as e:
+            print(f"No path found: {e}, creating direct route")
+            path = [closest_start_node, closest_end_node]
         
-        # Convert the path to lat/lng format for frontend
-        route_points = [{"lat": point[1], "lng": point[0]} for point in path]
+        # Convertir le chemin en coordonnées pour l'affichage
+        route_points = [{"lat": start_lat, "lng": start_lng}]  # Point de départ réel
         
-        # Add start and end points to ensure they are included
-        start_point_dict = {"lat": start_lat, "lng": start_lng}
-        end_point_dict = {"lat": end_lat, "lng": end_lng}
+        # Collecter les noms des rues pour chaque segment
+        street_names = []
         
-        if start_point_dict != route_points[0]:
-            route_points.insert(0, start_point_dict)
-        if end_point_dict != route_points[-1]:
-            route_points.append(end_point_dict)
+        # Ajouter le point le plus proche sur le réseau routier
+        route_points.append({"lat": closest_start_node[1], "lng": closest_start_node[0]})
+        # Premier nom de rue (pour le point de départ)
+        start_street = "rue non identifiée"
+        for feature in valid_features:
+            coords = feature["geometry"]["coordinates"]
+            for i in range(len(coords) - 1):
+                if tuple(coords[i]) == closest_start_node or tuple(coords[i+1]) == closest_start_node:
+                    if "name" in feature.get("properties", {}):
+                        start_street = feature["properties"]["name"]
+                        break
+        street_names.append(start_street)
         
-        # Calculate total distance
+        # Ajouter tous les points intermédiaires du chemin avec noms de rues et destinations
+        street_info = []
+        for i in range(len(path)):
+            point = path[i]
+            if i > 0 and i < len(path) - 1:  # Skip first and last point which we handle separately
+                route_points.append({"lat": point[1], "lng": point[0]})
+            
+            # Trouver le nom de la rue et la destination pour ce point
+            street_name = "rue non identifiée"
+            destination = None  # Nouvelle variable pour stocker la destination
+            
+            for feature in valid_features:
+                coords = feature["geometry"]["coordinates"]
+                props = feature.get("properties", {})
+                
+                for j in range(len(coords) - 1):
+                    if tuple(coords[j]) == point or tuple(coords[j+1]) == point:
+                        if "name" in props:
+                            street_name = props["name"]
+                        
+                        # Extraire l'information de destination si elle existe
+                        if transport_mode == "driving" and "destination" in props:
+                            destination = props["destination"]
+                        
+                        break
+                
+                if street_name != "rue non identifiée" or destination:
+                    break
+            
+            # Stocker les informations de rue pour chaque segment
+            street_info.append({
+                "name": street_name,
+                "destination": destination
+            })
+        
+        # Ajouter le point le plus proche du point d'arrivée
+        route_points.append({"lat": closest_end_node[1], "lng": closest_end_node[0]})
+        
+        # Nom de la rue finale
+        end_street = "rue non identifiée"
+        for feature in valid_features:
+            coords = feature["geometry"]["coordinates"]
+            for i in range(len(coords) - 1):
+                if tuple(coords[i]) == closest_end_node or tuple(coords[i+1]) == closest_end_node:
+                    if "name" in feature.get("properties", {}):
+                        end_street = feature["properties"]["name"]
+                        break
+        street_names.append(end_street)
+        
+        # Ajouter le point d'arrivée réel
+        route_points.append({"lat": end_lat, "lng": end_lng})
+        street_names.append(end_street)  # Même nom de rue pour le point d'arrivée
+        
+        # Calculer la distance totale
         distance = 0
-        for i in range(len(path) - 1):
-            distance += G.edges[path[i], path[i + 1]]['weight']
+        # Distance du point de départ réel au noeud le plus proche
+        distance += start_distance
         
-        # Calculate duration based on transport mode
+        # Distance le long du chemin calculé en vérifiant que les segments existent
+        if len(path) > 1:
+            if len(path) == 2:
+                # S'il s'agit d'un chemin direct, calculer la distance à vol d'oiseau
+                segment_distance = calculate_distance(
+                    path[0][1], path[0][0], path[1][1], path[1][0])
+                distance += segment_distance
+            else:
+                # Pour un chemin plus complexe, vérifier chaque segment
+                for i in range(len(path) - 1):
+                    if G.has_edge(path[i], path[i + 1]):
+                        segment_distance = G.edges[path[i], path[i + 1]]['weight']
+                    else:
+                        # Si l'arête n'existe pas, calculer la distance à vol d'oiseau
+                        segment_distance = calculate_distance(
+                            path[i][1], path[i][0], path[i + 1][1], path[i + 1][0])
+                    
+                    distance += segment_distance
+        
+        # Distance du dernier noeud au point d'arrivée réel
+        distance += end_distance
+        
+        # Calculer la durée en fonction du mode de transport
         speeds = {
             "walking": 5,
             "cycling": 15,
@@ -336,30 +612,17 @@ async def optimize_route(
             "transit": 20
         }
         speed = speeds.get(transport_mode, 5)
-        duration = (distance / speed) * 60 * 60  # Duration in seconds
-        
-        # Handle walking to the nearest road for driving mode
-        if transport_mode == "driving":
-            walking_distance = calculate_distance(start_lat, start_lng, closest_start[1], closest_start[0])
-            walking_duration = (walking_distance / 5) * 60 * 60  # 5 km/h walking speed
-            duration += walking_duration
-            distance += walking_distance
-        
-        # Handle walking to the nearest tram stop for tram mode
-        if transport_mode == "transit":
-            tram_stops = [node for node in G.nodes if G.nodes[node].get("type") == "tram_stop"]
-            closest_tram_stop = min(tram_stops, key=lambda node: calculate_distance(node[1], node[0], start_lat, start_lng))
-            walking_distance = calculate_distance(start_lat, start_lng, closest_tram_stop[1], closest_tram_stop[0])
-            walking_duration = (walking_distance / 5) * 60 * 60  # 5 km/h walking speed
-            duration += walking_duration
-            distance += walking_distance
+        duration = (distance / speed) * 60 * 60  # Durée en secondes
         
         return {
             "route": route_points,
             "distance": round(distance, 2),
             "duration": round(duration),
-            "transport_mode": transport_mode
+            "transport_mode": transport_mode,
+            "streetNames": [info["name"] for info in street_info],
+            "streetDestinations": [info["destination"] for info in street_info if info["destination"]]
         }
+    
     except Exception as e:
         import traceback
         error_details = traceback.format_exc()

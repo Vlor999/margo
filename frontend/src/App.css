@@ -198,21 +198,30 @@ body {
 
 .bottom-controls {
   position: fixed;
-  bottom: 30px; /* Increased slightly to match the sidebar spacing */
-  left: 340px; /* Ajusté pour s'aligner avec la sidebar flottante */
+  bottom: 20px;
+  left: 20px; /* Aligner avec le bord gauche de la sidebar */
   display: flex;
   gap: 10px;
   z-index: 1001;
-  transition: left 0.3s ease;
   padding: 14px 18px;
   background-color: var(--sidebar-bg-color);
   border-radius: 30px;
   box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
+  width: 234px; /* Ajusté pour correspondre à la largeur de la sidebar (270px - 2*18px padding) */
+  justify-content: center; /* Centrer les boutons horizontalement */
+  transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Ajout de l'effet de survol pour la barre de contrôle */
+.bottom-controls:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
 /* When sidebar is hidden */
 .bottom-controls.sidebar-hidden {
   left: 20px;
+  width: auto; /* Revenir à une largeur automatique quand la sidebar est cachée */
 }
 
 /* When sidebar is hidden */
