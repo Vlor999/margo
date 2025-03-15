@@ -15,7 +15,6 @@ function App() {
   const [showBackgroundRoutes, setShowBackgroundRoutes] = useState(true);;
   const [mapLayer, setMapLayer] = useState('standard');
 
-  // When optimized route changes, hide background routes
   useEffect(() => {
     if (optimizedRoute) {
       setShowBackgroundRoutes(false);

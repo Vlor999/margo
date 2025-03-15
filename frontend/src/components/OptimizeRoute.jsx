@@ -3,7 +3,7 @@ import { Polyline, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import "leaflet/dist/leaflet.css";
 
-// Fix for default markers
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -14,13 +14,12 @@ L.Icon.Default.mergeOptions({
 function OptimizeRoute({ route, simplified = false }) {
   if (!route || !route.route || route.route.length < 2) return null;
   
-  // Extract coordinates for the polyline
   const positions = route.route.map(point => [point.lat, point.lng]).filter(point => point[0] !== undefined && point[1] !== undefined);
   
-  // Check if we have segments for a multi-modal route
+
   const hasSegments = route.segments && route.segments.length > 0;
   
-  // If it's a transit route with segments, show each segment with its own style
+
   if (route.transport_mode === "transit" && hasSegments) {
     return (
       <>
@@ -28,30 +27,30 @@ function OptimizeRoute({ route, simplified = false }) {
         {route.segments.map((segment, index) => {
           const segmentPositions = segment.points.map(point => [point.lat, point.lng]).filter(point => point[0] !== undefined && point[1] !== undefined);
           
-          // Skip segments with fewer than 2 points
+
           if (segmentPositions.length < 2) return null;
           
-          // Determine color based on segment type
-          let color = '#3388ff'; // Default blue
-          let weight = 3; // Reduced from 5
+
+          let color = '#3388ff';
+          let weight = 3; 
           let dashArray = null;
           
           switch (segment.type) {
             case 'walking':
-              color = '#8B4513'; // Brown
-              weight = 2; // Reduced from 4
-              dashArray = '3, 3'; // Reduced from '5, 5'
+              color = '#8B4513';
+              weight = 2;
+              dashArray = '3, 3'; 
               break;
             case 'tram':
-              color = '#800080'; // Purple
-              weight = 3; // Reduced from 6
+              color = '#800080';
+              weight = 3;
               break;
             case 'bus':
-              color = '#008000'; // Green
-              weight = 2.5; // Reduced from 5
+              color = '#008000'; 
+              weight = 2.5;
               break;
             default:
-              color = '#3388ff'; // Default blue
+              color = '#3388ff';
           }
           
           return (
@@ -90,12 +89,11 @@ function OptimizeRoute({ route, simplified = false }) {
         
         {/* Transfer points between segments (excluding start and end) */}
         {hasSegments && route.segments.length > 1 && route.segments.slice(0, -1).map((segment, index) => {
-          if (index === 0) return null; // Skip first segment start
+          if (index === 0) return null; 
           
           const transferPoint = segment.points[segment.points.length - 1];
           const nextSegment = route.segments[index + 1];
           
-          // Skip if no next segment or if coordinates match start or end
           if (!nextSegment || 
               (transferPoint.lat === positions[0][0] && transferPoint.lng === positions[0][1]) || 
               (transferPoint.lat === positions[positions.length - 1][0] && transferPoint.lng === positions[positions.length - 1][1])) {
@@ -141,9 +139,8 @@ function OptimizeRoute({ route, simplified = false }) {
     );
   }
   
-  // For simpler routes (walking, cycling, driving) just show a direct route
-  // Determine color based on transport mode
-  let color = '#3388ff'; // Default blue
+
+  let color = '#3388ff'; // jolie
   switch (route.transport_mode) {
     case 'walking':
       color = '#8B4513'; // Brown
@@ -155,7 +152,7 @@ function OptimizeRoute({ route, simplified = false }) {
       color = '#FF0000'; // Red
       break;
     default:
-      color = '#3388ff'; // Default blue
+      color = '#3388ff';
   }
 
   return (
@@ -163,7 +160,7 @@ function OptimizeRoute({ route, simplified = false }) {
       <Polyline 
         positions={positions} 
         color={color}
-        weight={3} // Reduced from 5
+        weight={3} 
         opacity={0.7}
       />
       

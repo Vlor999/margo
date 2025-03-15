@@ -165,7 +165,7 @@
   z-index: 0;
 }
 
-/* Navigation Instructions Styles */
+
 .route-navigation-instructions {
   padding: 15px;
   background-color: #f8f9fa;
@@ -227,7 +227,7 @@
   font-style: italic;
 }
 
-/* Amélioration des styles pour les instructions de transit */
+
 .instruction-item {
   padding: 10px 0;
   border-bottom: 1px solid #f0f0f0;
@@ -253,7 +253,7 @@
   margin-top: 3px;
 }
 
-/* Un style différent pour les changements de transport */
+
 .instruction-item.transport-change {
   background-color: rgba(52, 152, 219, 0.05);
   border-left: 3px solid #3498db;
@@ -261,7 +261,7 @@
   margin: 5px 0;
 }
 
-/* Un style différent pour les arrêts importants */
+
 .instruction-item.major-stop {
   background-color: rgba(231, 76, 60, 0.05);
   border-left: 3px solid #e74c3c;
@@ -269,7 +269,7 @@
   margin: 5px 0;
 }
 
-/* Dark mode styles */
+
 .dark-mode .route-navigation-instructions {
   background-color: #2a2a2a;
   border-color: #444;
@@ -296,7 +296,7 @@
   color: #aaa;
 }
 
-/* Dark mode adaptations */
+
 .dark-mode .route-navigation-instructions {
   background-color: #333;
   border-color: #444;
@@ -318,7 +318,7 @@
   color: #aaa;
 }
 
-/* Responsive styles */
+
 @media (max-width: 576px) {
   .route-details-container {
     width: calc(100% - 40px);

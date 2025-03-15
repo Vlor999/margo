@@ -6,21 +6,15 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
   const geoJsonRef = useRef(null);
   const map = useMap();
   
-  // Optimize data if needed before rendering
   const optimizedData = React.useMemo(() => {
-    // If no data, return null
     if (!data || !data.features) return null;
     
-    // Clone the data to avoid mutating the original
     const clonedData = JSON.parse(JSON.stringify(data));
     
-    // For large datasets, consider simplifying the features based on zoom
     const zoom = map.getZoom();
     const simplifyThreshold = zoom < 13 ? 0.0001 : 0;
     
-    // If we're at a low zoom level, limit the number of features
     if (zoom < 12) {
-      // Keep only major roads and transit lines for better performance
       clonedData.features = clonedData.features.filter(feature => {
         const props = feature.properties || {};
         if (type === 'route') {
@@ -38,48 +32,45 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
   const getRouteStyle = (feature) => {
     const properties = feature.properties || {};
     
-    // Default style - reduced weight from 2 to 0.8
     let style = {
       color: '#3388ff',
       weight: 0.8,
       opacity: 0.6
     };
     
-    // Route type styles
     if (type === 'route') {
       const highway = properties.highway;
       
       if (highway === 'footway' || highway === 'path' || highway === 'pedestrian') {
-        style.color = '#8B4513'; // Brown for pedestrian paths
+        style.color = '#8B4513'; 
         style.weight = 0.5;
       } else if (highway === 'cycleway') {
-        style.color = '#006400'; // Dark green for bicycle paths
+        style.color = '#006400';
         style.weight = 0.7;
-        style.dashArray = '3, 3'; // Reduced from '5, 5'
+        style.dashArray = '3, 3'; 
       } else if (highway === 'primary') {
-        style.color = '#FF0000'; // Red for primary roads
-        style.weight = 1.5; // Reduced from 3
+        style.color = '#FF0000'; 
+        style.weight = 1.5;
       } else if (highway === 'secondary') {
-        style.color = '#FFA500'; // Orange for secondary roads
-        style.weight = 1; // Reduced from 2
+        style.color = '#FFA500'; 
+        style.weight = 1; 
       } else if (highway === 'residential') {
-        style.color = '#808080'; // Gray for residential roads
+        style.color = '#808080'; 
         style.weight = 0.6;
       }
     } 
-    // Transport type styles
     else if (type === 'transport') {
       const routeType = properties.route_type;
       
       if (routeType === 'tram') {
         style.color = '#00BFFF'; // Blue for tram routes
-        style.weight = 1.5; // Reduced from 4
+        style.weight = 1.5;
       } else if (routeType === 'bus') {
         style.color = '#32CD32'; // Green for bus routes
-        style.weight = 1; // Reduced from 3
+        style.weight = 1; 
       } else if (routeType === 'subway') {
         style.color = '#800080'; // Purple for subway
-        style.weight = 1.5; // Reduced from 4
+        style.weight = 1.5;
       }
     }
     
@@ -89,24 +80,22 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
   const getPointStyle = (feature) => {
     const properties = feature.properties || {};
     
-    // Default style for points - reduced radius from 6 to 3
     let style = {
       radius: 3,
       fillColor: "#3388ff",
       color: "#000",
-      weight: 0.5, // Reduced from 1
+      weight: 0.5, 
       opacity: 1,
       fillOpacity: 0.8
     };
     
-    // Style based on point type
     if (properties.public_transport === 'stop_position') {
       if (properties.bus === 'yes') {
         style.fillColor = '#32CD32'; // Green for bus stops
-        style.radius = 2.5; // Smaller radius for bus stops
+        style.radius = 2.5;
       } else if (properties.tram === 'yes') {
         style.fillColor = '#00BFFF'; // Blue for tram stops
-        style.radius = 2.5; // Smaller radius for tram stops
+        style.radius = 2.5;
       }
     }
     
@@ -114,7 +103,6 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
   };
 
   const onEachFeature = (feature, layer) => {
-    // Add popups with information
     if (feature.properties) {
       const props = feature.properties;
       let popupContent = '<div class="popup-content">';
@@ -132,7 +120,6 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
           if (props.name) popupContent += `<p><strong>Name:</strong> ${props.name}</p>`;
           if (props.ref) popupContent += `<p><strong>Reference:</strong> ${props.ref}</p>`;
           
-          // Add button to show schedules
           if (props.ref) {
             popupContent += `<button class="schedule-btn" data-stop-id="${props.ref}">Show Schedules</button>`;
           }
@@ -146,7 +133,6 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
       popupContent += '</div>';
       layer.bindPopup(popupContent);
       
-      // Add click event for stops to fetch schedules
       if (type === 'transport' && props.public_transport === 'stop_position' && props.ref && onStopClick) {
         layer.on('click', () => {
           onStopClick(props.ref);
@@ -155,7 +141,6 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
     }
   };
   
-  // Pause rendering during map move for better performance
   useEffect(() => {
     if (!geoJsonRef.current) return;
     
@@ -192,7 +177,7 @@ function GeojsonLayer({ data, type, filters, onStopClick }) {
       }}
       onEachFeature={onEachFeature}
       ref={geoJsonRef}
-      renderer={L.canvas({ padding: 0.5 })} // Use canvas renderer for better performance
+      renderer={L.canvas({ padding: 0.5 })} 
     />
   );
 }

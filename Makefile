@@ -1,13 +1,11 @@
-# Makefile pour l'application Transport Grenoble
+# Makefile pour l'application Transport Grenoble : foncitonne pas
 
-# Variables
 BACKEND_DIR = backend
 FRONTEND_DIR = frontend
 PYTHON = python3
 PIP = pip3
 NPM = npm
 
-# Détection du système d'exploitation
 ifeq ($(OS),Windows_NT)
     DETECTED_OS := Windows
     ACTIVATE_CMD := $(BACKEND_DIR)\venv\Scripts\activate
@@ -18,10 +16,9 @@ endif
 
 .PHONY: all install install-backend install-frontend run run-backend run-frontend stop clean help venv
 
-# Cible par défaut
 all: install run
 
-# Installation des dépendances
+
 install: install-backend install-frontend
 
 install-backend: venv
@@ -32,14 +29,13 @@ install-frontend:
 	@echo "Installation des dépendances frontend..."
 	cd $(FRONTEND_DIR) && $(NPM) install
 
-# Création de l'environnement virtuel Python
 venv:
 	@echo "Création de l'environnement virtuel Python..."
 	$(PYTHON) -m venv $(BACKEND_DIR)/venv
 	@echo "Pour activer l'environnement virtuel, exécutez:"
 	@echo "  $(ACTIVATE_CMD)"
 
-# Lancement des services
+
 run:
 	@echo "Pour lancer l'application complète, ouvrez deux terminaux et exécutez:"
 	@echo "Terminal 1: make run-backend"
@@ -53,7 +49,6 @@ run-frontend:
 	@echo "Démarrage du serveur frontend..."
 	cd $(FRONTEND_DIR) && $(NPM) start
 
-# Arrêt des services
 stop:
 	@echo "Arrêt des serveurs..."
 ifeq ($(DETECTED_OS),Windows)
@@ -64,7 +59,7 @@ else
 	@echo "Serveurs arrêtés"
 endif
 
-# Nettoyage
+
 clean:
 	@echo "Nettoyage des fichiers temporaires..."
 	rm -rf $(BACKEND_DIR)/__pycache__ $(BACKEND_DIR)/*.pyc
@@ -76,7 +71,7 @@ clean-all: clean
 	rm -rf $(BACKEND_DIR)/venv
 	rm -rf $(FRONTEND_DIR)/node_modules
 
-# Aide
+
 help:
 	@echo "Grenoble Transport Map - Aide"
 	@echo "============================="

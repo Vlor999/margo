@@ -67,7 +67,7 @@ body {
 .App-content {
   display: flex;
   flex: 1;
-  position: relative; /* Permet le positionnement absolu des enfants */
+  position: relative; 
   overflow: hidden;
 }
 
@@ -77,12 +77,12 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100%; /* Assure que la carte occupe tout l'espace disponible */
+  width: 100%;
   height: calc(100vh - 60px);
   z-index: 900;
 }
 
-/* Assurer que les tuiles Leaflet sont bien derrière la sidebar */
+
 .leaflet-container {
   z-index: 900;
   position: absolute;
@@ -122,12 +122,10 @@ body {
   color: #e74c3c;
 }
 
-/* Dark map styles */
 .dark-map .leaflet-tile-pane {
   filter: brightness(0.8);
 }
 
-/* Light mode variables */
 .light-mode {
   --header-bg-color: #2c3e50;
   --header-text-color: white;
@@ -150,7 +148,6 @@ body {
   --button-active-dark-bg: #1abc9c;
 }
 
-/* Dark mode variables */
 .dark-mode {
   --header-bg-color: #1a1a1a;
   --header-text-color: #f0f0f0;
@@ -171,13 +168,11 @@ body {
   --input-text-color: #f0f0f0;
 }
 
-/* Résoudre le problème de bord blanc en mode sombre */
 .dark-mode .sidebar {
   outline: none;
   border-color: var(--sidebar-bg-color);
 }
 
-/* Make sidebar responsive */
 @media (max-width: 768px) {
   .sidebar {
     position: absolute;
@@ -199,7 +194,7 @@ body {
 .bottom-controls {
   position: fixed;
   bottom: 20px;
-  left: 20px; /* Aligner avec le bord gauche de la sidebar */
+  left: 20px;
   display: flex;
   gap: 10px;
   z-index: 1001;
@@ -207,24 +202,21 @@ body {
   background-color: var(--sidebar-bg-color);
   border-radius: 30px;
   box-shadow: 0 3px 15px rgba(0, 0, 0, 0.2);
-  width: 234px; /* Ajusté pour correspondre à la largeur de la sidebar (270px - 2*18px padding) */
-  justify-content: center; /* Centrer les boutons horizontalement */
+  width: 234px; 
+  justify-content: center;
   transition: all 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Ajout de l'effet de survol pour la barre de contrôle */
 .bottom-controls:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
-/* When sidebar is hidden */
 .bottom-controls.sidebar-hidden {
   left: 20px;
-  width: auto; /* Revenir à une largeur automatique quand la sidebar est cachée */
+  width: auto;
 }
 
-/* When sidebar is hidden */
 .App-content:not(:has(.sidebar)) .bottom-controls {
   left: 20px;
 }
@@ -234,7 +226,6 @@ body {
   height: 40px;
   background-color: white;
   border: none;
-  /* Arrondir complètement en cercle */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -253,7 +244,6 @@ body {
 .bottom-controls .control-btn.active {
   background-color: var(--button-bg-color);
   color: white;
-  /* Effet léger de déplacement vers le haut quand actif */
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -263,7 +253,6 @@ body {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Handle responsive layout */
 @media (max-width: 768px) {
   .bottom-controls {
     left: 20px;
@@ -271,7 +260,6 @@ body {
   }
 }
 
-/* Ajuster également les panels d'information pour qu'ils flottent */
 .transport-info-container,
 .route-details-container {
   border-radius: 16px;

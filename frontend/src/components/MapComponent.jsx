@@ -7,14 +7,12 @@ import RouteDetails from './RouteDetails';
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 
-// Composant pour contrôler le rendu des couches pendant le déplacement
 function MapEventHandler({ setIsMoving }) {
   const map = useMap();
   
   useEffect(() => {
     const handleMoveStart = () => setIsMoving(true);
     const handleMoveEnd = () => {
-      // Petit délai pour un rendu plus fluide
       setTimeout(() => setIsMoving(false), 100);
     };
     
@@ -30,7 +28,6 @@ function MapEventHandler({ setIsMoving }) {
   return null;
 }
 
-// Grenoble coordinates
 const GRENOBLE_CENTER = [45.188529, 5.724524];
 const ZOOM_LEVEL = 13;
 
@@ -39,7 +36,7 @@ function MapComponent({
   optimizedRoute, 
   setOptimizedRoute, 
   darkMode,
-  showBackgroundRoutes, // Use these props instead of internal state
+  showBackgroundRoutes, 
   mapLayer 
 }) {
   const [routesData, setRoutesData] = useState(null);
@@ -50,7 +47,6 @@ function MapComponent({
   const [isMoving, setIsMoving] = useState(false);
 
   useEffect(() => {
-    // Fetch routes data
     const fetchRoutesData = async () => {
       try {
         const params = {};
@@ -69,7 +65,6 @@ function MapComponent({
       }
     };
 
-    // Fetch transport data
     const fetchTransportData = async () => {
       try {
         const response = await axios.get('/api/geojson/transport');
@@ -110,7 +105,7 @@ function MapComponent({
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         className={darkMode ? 'dark-map' : ''}
-        preferCanvas={true} // Utiliser Canvas au lieu de SVG pour de meilleures performances
+        preferCanvas={true}
       >
         <ZoomControl position="bottomright" />
         <MapEventHandler setIsMoving={setIsMoving} />

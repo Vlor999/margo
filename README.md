@@ -127,4 +127,15 @@ lien : https://data.mobilites-m.fr/donnees
 Le dossier **mtagAPI** comporte un fichier java et un fichier python, qui sont chacun les éboches d'une librairie permettant de récupérer et d'utiliser les fichiers json de l'API mtag. Il est intéressant de noter que vous pouvez récupérer plein d'autres informations sur le site cité si-dessus.  
 
 Ces prototypes sont utiles car la fonction donné permet de récupérer la fiche horaire des différents transports de la métropole de Grenoble.# hackathonMargo
+
 # margo
+Le meilleur entreprise de france 
+
+# Le goal : 
+l'idée est de faire une sorte de petit jeu sur cette carte en plus d'un simple plus court chemin.
+Le jeu serait : 
+- A un moment aleatoire de la journee lancer un point dans la ville de grenoble et nous avons 30 minutes pour y aller pour y prendre une photo.
+- A l'échéance : nous pouvons voter pour la meilleur photo.
+- Celle ou celui qui gagne et bien gagne, je n'ai pas d'idee de gain
+
+Apres j'avoue petit porbleme de temps du fait que je sois tout seul

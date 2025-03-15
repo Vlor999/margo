@@ -107,9 +107,8 @@ async def geocode_address(address: str):
             'format': 'json',
             'limit': 1,
             'addressdetails': 1,
-            # Focus on Grenoble area for better results
             'viewbox': '5.6,45.1,5.8,45.3',  # Viewbox around Grenoble
-            'bounded': 1  # Search only within viewbox
+            'bounded': 1
         }
         
         response = requests.get('https://nominatim.openstreetmap.org/search', params=params, headers=headers)
@@ -128,9 +127,8 @@ async def geocode_address(address: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Helper function to calculate distance between two points using Haversine formula
 def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371  # Earth radius in kilometers
+    R = 6371
     dLat = (lat2 - lat1) * math.pi / 180
     dLon = (lon2 - lon1) * math.pi / 180
     a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.cos(lat1 * math.pi / 180) * math.cos(lat2 * math.pi / 180) * math.sin(dLon / 2) * math.sin(dLon / 2)
@@ -141,7 +139,7 @@ def extract_tram_route(tram_route):
     """Extract route points and other details from the tram route"""
     route_points = []
     segments = []
-    total_distance = tram_route.get("walkDistance", 0) / 1000  # Convert meters to kilometers
+    total_distance = tram_route.get("walkDistance", 0) / 1000
     duration = tram_route.get('duration', 0)
     
     # Extraire les noms de rues pour les renvoyer au frontend
@@ -188,34 +186,30 @@ def extract_tram_route(tram_route):
                 if 'to' in elem:
                     segment_points.append({"lat": elem['to']['lat'], "lng": elem['to']['lon']})
                 
-                if len(segment_points) >= 2:  # Assurons-nous qu'il y a au moins 2 points
+                if len(segment_points) >= 2:
                     segments.append({
                         "type": "walking",
                         "points": segment_points,
                         "from": from_stop.get('name'),
                         "to": to_stop.get('name'),
                         "duration": elem.get('duration', 0),
-                        "distance": elem.get('distance', 0) / 1000  # Convert to km
+                        "distance": elem.get('distance', 0) / 1000 
                     })
                     
                     route_points.extend(segment_points)
                     
             elif mode in ['TRAM', 'BUS', 'RAIL', 'SUBWAY']:
-                # Transit segment
                 segment_points = []
                 
-                # Ajouter le point de départ
                 if 'from' in elem:
                     segment_points.append({"lat": elem['from']['lat'], "lng": elem['from']['lon']})
                 
-                # Décoder les points de géométrie si disponibles
                 try:
                     polyline = elem['legGeometry']['points']
                     lat, lng = 0, 0
                     index = 0
                     
-                    while index < len(polyline):
-                        # Décodage standard du format polyline de Google
+                    while index < len(polyline): # Une focniton ici serait plus propre
                         result = 1
                         shift = 0
                         while True:
@@ -242,11 +236,10 @@ def extract_tram_route(tram_route):
                 except Exception as e:
                     print(f"Error decoding polyline: {e}")
                 
-                # Ajouter le point d'arrivée
                 if 'to' in elem:
                     segment_points.append({"lat": elem['to']['lat'], "lng": elem['to']['lon']})
                 
-                if len(segment_points) >= 2:  # Assurons-nous qu'il y a au moins 2 points
+                if len(segment_points) >= 2: 
                     transit_type = mode.lower()
                     segments.append({
                         "type": transit_type,
@@ -256,13 +249,12 @@ def extract_tram_route(tram_route):
                         "from": from_stop.get('name'),
                         "to": to_stop.get('name'),
                         "duration": elem.get('duration', 0),
-                        "distance": elem.get('distance', 0) / 1000,  # Convert to km
-                        "headsign": elem.get('headsign', '')  # Direction du transport
+                        "distance": elem.get('distance', 0) / 1000,
+                        "headsign": elem.get('headsign', '')
                     })
                     
                     route_points.extend(segment_points)
     
-    # S'assurer qu'il y a suffisamment de noms de rues pour tous les points
     while len(street_names) < len(route_points):
         street_names.append("Rue non identifiée")
     
@@ -274,7 +266,7 @@ def extract_tram_route(tram_route):
         "transport_mode": "transit",
         "streetNames": street_names,
         "streetDestinations": street_destinations,
-        "detailed_instructions": detailed_instructions  # Nouvelles instructions détaillées
+        "detailed_instructions": detailed_instructions # le chemin
     }
 
 @app.get("/api/optimize")
@@ -289,7 +281,6 @@ async def optimize_route(
 ):
     """Optimize route between two points using the actual roads/paths from GeoJSON data"""
     try:
-        # If addresses are provided, geocode them
         if start_address:
             start_coords = await geocode_address(start_address)
             start_lat, start_lng = start_coords["lat"], start_coords["lng"]
@@ -301,39 +292,34 @@ async def optimize_route(
         if not all([start_lat, start_lng, end_lat, end_lng]):
             raise HTTPException(status_code=400, detail="Missing coordinates or addresses")
 
-        # Special case for transit mode using MTAG API
         if transport_mode == "tram" or transport_mode == "transit":
             try:
                 print(f"Calculating transit route from ({start_lat}, {start_lng}) to ({end_lat}, {end_lng})")
                 
-                # Call MTAG API for transit routing
                 tram_route = calculate_tram_route((start_lat, start_lng), (end_lat, end_lng))
                 
-                # Debug information
                 print(f"MTAG API response: {json.dumps(tram_route)[:200]}...")  # Print first 200 chars
                 
-                # Handle API errors
                 if not tram_route:
                     print("No transit route returned by MTAG API")
                     print("Falling back to walking route")
-                    transport_mode = "walking"  # Fall back to walking
+                    transport_mode = "walking" 
                 elif 'error' in tram_route:
                     print(f"MTAG API error: {tram_route['error']}")
                     print("Falling back to walking route")
-                    transport_mode = "walking"  # Fall back to walking
+                    transport_mode = "walking"
                 elif 'duration' not in tram_route or not tram_route.get('legs'):
                     print(f"Invalid MTAG API response: {tram_route}")
                     print("Falling back to walking route")
-                    transport_mode = "walking"  # Fall back to walking
+                    transport_mode = "walking"
                 else:
-                    # We have a valid transit route from MTAG API
                     result = extract_tram_route(tram_route)
                     print(f"Successfully extracted transit route with {len(result['route'])} points and {len(result.get('segments', []))} segments")
                     return result
             except Exception as e:
                 print(f"Transit routing error with MTAG API: {e}")
                 print("Falling back to walking route")
-                transport_mode = "walking"  # Fall back to walking
+                transport_mode = "walking"
 
         # If we reached here for transit mode, it means we're falling back to walking
         # Continue with standard routing for walking/cycling/driving
@@ -347,15 +333,14 @@ async def optimize_route(
             "walking": ["footway", "path", "pedestrian", "steps", "residential", "service"],
             "cycling": ["cycleway", "residential", "path", "footway", "secondary", "tertiary"],
             "driving": ["motorway", "trunk", "primary", "secondary", "tertiary", "residential", "service"],
-            "transit": []  # We'll handle transit separately using transport GeoJSON
+            "transit": [] 
         }
         
         if transport_mode == "transit":
-            # For transit mode, add the transport data
             transport_file_path = os.path.join(BASE_DIR, "data_transport_commun_grenoble_formate.geojson")
             with open(transport_file_path, 'r') as file:
                 transport_data = json.load(file)
-                # Combine relevant features
+
                 geo_data["features"].extend([f for f in transport_data["features"] 
                                         if f.get("geometry", {}).get("type") == "LineString"])
         

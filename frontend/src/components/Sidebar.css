@@ -147,7 +147,6 @@
 
 .apply-btn:hover, .reset-btn:hover, .reset-route-btn:hover {
   background-color: var(--button-hover-bg-color);
-  /* Effet de zoom léger au survol */
   transform: scale(1.03);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -157,30 +156,29 @@
 }
 
 .route-optimizer .form-group {
-  margin-bottom: 12px; /* Réduit de 16px à 12px */
+  margin-bottom: 12px;
 }
 
 .route-optimizer .form-group label {
   display: block;
-  margin-bottom: 6px; /* Réduit de 8px à 6px */
+  margin-bottom: 6px;
   font-weight: 500;
-  font-size: 13px; /* Réduit de 14px à 13px */
+  font-size: 13px;
   color: var(--label-color);
 }
 
 .route-optimizer .form-group input,
 .route-optimizer .form-group select {
   width: 100%;
-  padding: 10px; /* Réduit de 12px à 10px */
+  padding: 10px;
   border: 1px solid var(--input-border-color);
-  /* Arrondir davantage les coins des inputs et selects */
   border-radius: 12px;
-  font-size: 13px; /* Réduit de 14px à 13px */
+  font-size: 13px; 
   background-color: var(--input-bg-color);
   color: var(--input-text-color);
   outline: none;
   transition: border-color 0.2s;
-  box-sizing: border-box; /* Cruciale pour inclure padding/border dans la largeur */
+  box-sizing: border-box;
 }
 
 .route-optimizer .form-group input:focus,
@@ -194,8 +192,8 @@
 .route-optimizer .form-group input[name="endLng"] {
   width: calc(50% - 5px);
   display: inline-block;
-  box-sizing: border-box; /* Garantit que le calcul de largeur inclut padding et border */
-  margin-right: 0; /* Supprimer les marges par défaut */
+  box-sizing: border-box;
+  margin-right: 0;
 }
 
 .route-optimizer .form-group input[name="startLng"],
@@ -204,22 +202,20 @@
 }
 
 .route-optimizer .form-actions {
-  margin-top: 20px; /* Réduit de 25px à 20px */
+  margin-top: 20px;
 }
 
 .route-optimizer button {
   width: 100%;
-  padding: 10px; /* Réduit de 12px à 10px */
+  padding: 10px; 
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
-  /* Arrondir davantage les coins du bouton principal */
   border-radius: 24px;
   cursor: pointer;
   font-weight: 500;
   font-size: 15px;
   transition: all 0.3s;
-  /* Ajouter une légère ombre pour un effet 3D */
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
@@ -233,7 +229,6 @@
   background-color: #e74c3c;
   color: white;
   margin-top: 10px;
-  /* Arrondir davantage les coins du bouton de réinitialisation */
   border-radius: 20px;
 }
 
@@ -243,12 +238,10 @@
 
 .input-type-toggle {
   display: flex;
-  margin-bottom: 15px; /* Réduit de 18px à 15px */
-  /* Arrondir davantage les coins du groupe de toggle */
+  margin-bottom: 15px;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid var(--toggle-border-color);
-  /* Ajouter une légère ombre */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
@@ -283,15 +276,12 @@
   font-size: 14px;
   padding: 10px;
   background-color: rgba(231, 76, 60, 0.1);
-  /* Arrondir davantage les coins du message d'erreur */
   border-radius: 12px;
   text-align: center;
 }
 
-/* Tab content visibility */
 .tab-content {
   display: none;
-  /* Ajouter un effet de transition doux pour le changement d'onglet */
   transition: opacity 0.3s ease;
   opacity: 0;
 }
@@ -300,10 +290,11 @@
   display: block;
   opacity: 1;
 }
-/* Adapter également le z-index des contrôles en bas pour qu'ils restent au-dessus de la carte */
+
 .bottom-controls {
-  z-index: 1001; /* Légèrement plus élevé que la sidebar */
+  z-index: 1001; 
 }
+
 
 .transport-select {
   padding: 8px 12px;
@@ -311,8 +302,8 @@
   display: flex;
 }
 
+
 .transport-select option {
-  /* Espacement des émojis dans les options */
   font-weight: 500;
 }
 
@@ -331,7 +322,7 @@
   width: 100%;
   padding: 12px 15px;
   border: 1px solid var(--input-border-color);
-  border-radius: 16px; /* Arrondir davantage pour être cohérent */
+  border-radius: 16px; 
   font-size: 14px;
   background-color: var(--input-bg-color);
   color: var(--input-text-color);
@@ -345,7 +336,7 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23999' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
   background-repeat: no-repeat;
   background-position: calc(100% - 15px) center;
-  padding-right: 40px; /* Espace pour l'icône */
+  padding-right: 40px;
 }
 
 .route-optimizer .form-group select:hover {
@@ -359,19 +350,19 @@
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.15);
 }
 
-/* Style des options du select dans le menu déroulant */
+
 .route-optimizer .form-group select option {
   padding: 10px;
   background-color: var(--sidebar-bg-color);
   color: var(--sidebar-text-color);
 }
 
-/* Style pour le select en dark mode */
+
 .dark-mode .route-optimizer .form-group select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ccc' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
 }
 
-/* Fix pour les inputs d'adresse pour qu'ils restent centrés dans leur conteneur */
+
 .route-optimizer .form-group input[type="text"] {
   width: 100%;
   box-sizing: border-box;
