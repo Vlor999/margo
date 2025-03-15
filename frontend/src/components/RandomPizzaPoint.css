@@ -1,0 +1,163 @@
+.pizza-popup {
+  text-align: center;
+  padding: 5px;
+  background-color: var(--sidebar-bg-color);
+  color: var(--sidebar-text-color);
+}
+
+.pizza-popup h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #e74c3c;
+}
+
+.pizza-popup p {
+  margin: 8px 0;
+  color: var(--sidebar-text-color);
+}
+
+.timer-bar {
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.dark-mode .timer-bar {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.timer-progress {
+  height: 100%;
+  background-color: #e74c3c;
+  transition: width 1s linear;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  background-color: var(--sidebar-bg-color) !important;
+  color: var(--sidebar-text-color) !important;
+}
+
+.leaflet-popup-tip {
+  background-color: var(--sidebar-bg-color) !important;
+}
+
+.leaflet-popup-content {
+  margin: 15px;
+  width: 220px !important;
+  color: var(--sidebar-text-color) !important;
+}
+
+.popup-notification {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background-color: rgba(231, 76, 60, 0.9);
+  color: white;
+  padding: 15px 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  animation: popup-fade-in 0.5s;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes popup-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.user-location-popup {
+  text-align: center;
+  background-color: var(--sidebar-bg-color);
+  color: var(--sidebar-text-color);
+}
+
+.user-location-popup h3 {
+  margin-top: 0;
+  color: #3498db;
+  margin-bottom: 8px;
+}
+
+.close-enough {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.location-permission-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background-color: var(--sidebar-bg-color);
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.location-permission-overlay button {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.location-permission-overlay button:hover {
+  background-color: var(--button-hover-bg-color);
+}
+
+.navigate-to-pizza-btn {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 15px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.navigate-to-pizza-btn:hover {
+  background-color: var(--button-hover-bg-color);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Transport mode selector in popup */
+.transport-mode-select {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background-color: var(--input-bg-color);
+  color: var(--input-text-color);
+  border: 1px solid var(--input-border-color);
+  font-size: 14px;
+  appearance: none;
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 12px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23555' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
+  cursor: pointer;
+  text-align-last: center;
+}
+
+.dark-mode .transport-mode-select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23ccc' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
+}

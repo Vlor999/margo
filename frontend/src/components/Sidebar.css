@@ -4,20 +4,29 @@
   color: var(--sidebar-text-color);
   padding: 0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  height: auto;
-  max-height: calc(100vh - 170px); /* Réduit la hauteur pour laisser de l'espace aux boutons */
+  height: calc(100vh - 240px); /* Augmenté l'espace en bas */
+  max-height: calc(100vh - 240px); /* Augmenté l'espace en bas */
   z-index: 1000;
-  /* Harmonisation du border-radius avec la barre de contrôle */
-  border-radius: 30px;
+  border-radius: 20px;
   position: absolute;
   left: 20px;
   top: 80px;
-  bottom: 100px; /* Augmenté pour rendre la sidebar plus petite en hauteur */
   backdrop-filter: blur(2px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease; /* Animation modifiée */
+  overflow: hidden; /* Empêche le défilement global */
+  transform: translateX(0); /* Position initiale */
+}
+
+/* Ajout de la classe pour la sidebar cachée */
+.sidebar.hidden {
+  transform: translateX(-110%); /* Déplacement hors écran avec un peu de marge */
+  box-shadow: none; /* Suppression de l'ombre lors de la disparition */
+}
+
+.sidebar-header {
+  padding: 12px 12px 0 12px;
 }
 
 /* Effet hover subtil pour renforcer le flottement */
@@ -33,9 +42,14 @@
 }
 
 .sidebar-content {
-  padding: 15px; /* Réduit de 20px à 15px */
+  padding: 12px;
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto; /* Permet le défilement uniquement à l'intérieur de cette section si nécessaire */
+}
+
+/* Supprimer le style sidebar-footer car nous n'utilisons plus ce composant */
+.sidebar-footer {
+  display: none;
 }
 
 .sidebar-tabs {
@@ -46,7 +60,7 @@
 .sidebar-tab {
   flex: 1;
   text-align: center;
-  padding: 12px 0; /* Réduit de 15px à 12px */
+  padding: 10px 0;
   cursor: pointer;
   font-weight: 500;
   color: var(--sidebar-text-color);
@@ -68,27 +82,34 @@
 }
 
 .filter-section, .route-optimizer {
-  margin-bottom: 18px; /* Réduit de 24px à 18px */
+  margin-bottom: 15px;
   background-color: var(--sidebar-bg-color);
-  /* Arrondir les coins des sections */
-  border-radius: 16px;
-  padding: 12px; /* Réduit de 15px à 12px */
+  border-radius: 12px;
+  padding: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .filter-section h3, .route-optimizer h3 {
   margin-top: 0;
-  font-size: 15px; /* Réduit de 16px à 15px */
+  font-size: 14px;
   color: var(--section-header-color);
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--toggle-border-color);
-  margin-bottom: 12px; /* Réduit de 15px à 12px */
+  margin-bottom: 10px;
 }
 
 .filter-options {
   display: flex;
   flex-direction: column;
-  gap: 8px; /* Réduit de 10px à 8px */
+  gap: 6px;
+}
+
+.filter-options.compact {
+  gap: 4px;
+}
+
+.filter-options.compact label {
+  font-size: 12px;
 }
 
 .filter-options label {
@@ -96,11 +117,11 @@
   align-items: center;
   cursor: pointer;
   margin: 0;
-  font-size: 13px; /* Réduit de 14px à 13px */
+  font-size: 13px;
 }
 
 .filter-options input[type="checkbox"] {
-  margin-right: 10px;
+  margin-right: 8px;
   cursor: pointer;
 }
 
@@ -109,7 +130,6 @@
   margin-left: 10px;
   padding: 8px;
   border: 1px solid var(--input-border-color);
-  /* Arrondir les coins des inputs numériques */
   border-radius: 12px;
   background-color: var(--input-bg-color);
   color: var(--input-text-color);
@@ -118,21 +138,20 @@
 .filter-actions {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .apply-btn, .reset-btn, .reset-route-btn {
-  padding: 8px 12px; /* Réduit de 10px 15px à 8px 12px */
+  padding: 6px 10px;
   background-color: var(--button-bg-color);
   color: var(--button-text-color);
   border: none;
-  /* Arrondir davantage les coins des boutons */
   border-radius: 20px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.3s;
-  /* Ajouter une légère ombre pour un effet 3D */
+  font-size: 12px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -156,12 +175,12 @@
 }
 
 .route-optimizer .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .route-optimizer .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-weight: 500;
   font-size: 13px;
   color: var(--label-color);
@@ -170,7 +189,7 @@
 .route-optimizer .form-group input,
 .route-optimizer .form-group select {
   width: 100%;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid var(--input-border-color);
   border-radius: 12px;
   font-size: 13px; 
@@ -202,7 +221,7 @@
 }
 
 .route-optimizer .form-actions {
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
 .route-optimizer button {
@@ -295,13 +314,11 @@
   z-index: 1001; 
 }
 
-
 .transport-select {
-  padding: 8px 12px;
+  padding: 8px;
   align-items: center;
   display: flex;
 }
-
 
 .transport-select option {
   font-weight: 500;
@@ -350,20 +367,64 @@
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.15);
 }
 
-
 .route-optimizer .form-group select option {
   padding: 10px;
   background-color: var(--sidebar-bg-color);
   color: var(--sidebar-text-color);
 }
 
-
 .dark-mode .route-optimizer .form-group select {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23ccc' viewBox='0 0 16 16'><path d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/></svg>");
 }
 
-
 .route-optimizer .form-group input[type="text"] {
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Réduire la taille de la barre de progression pour gagner de la place */
+.level-progress-container {
+  padding: 10px;
+  margin-bottom: 0;
+}
+
+.level-header {
+  margin-bottom: 6px;
+}
+
+.level-info h3 {
+  font-size: 14px;
+}
+
+.pizza-challenge-info {
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.pizza-challenge-info p {
+  margin: 3px 0;
+}
+
+/* Ajustements pour les écrans plus petits */
+@media (max-height: 700px) {
+  .sidebar {
+    max-height: calc(100vh - 200px); /* Plus d'espace en bas pour les petits écrans */
+  }
+  
+  .filter-section, .route-optimizer {
+    margin-bottom: 10px;
+    padding: 8px;
+  }
+  
+  .form-group {
+    margin-bottom: 8px;
+  }
+  
+  .sidebar-footer {
+    padding: 8px;
+  }
+  
+  .pizza-challenge-info {
+    display: none; /* Cacher les informations sur les défis pizza sur les petits écrans */
+  }
 }

@@ -4,6 +4,8 @@ import GeojsonLayer from './GeojsonLayer';
 import TransportInfo from './TransportInfo';
 import OptimizeRoute from './OptimizeRoute';
 import RouteDetails from './RouteDetails';
+import RandomPizzaPoint from './RandomPizzaPoint';
+import UserLocationMarker from './UserLocationMarker'; // Import du nouveau composant
 import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 
@@ -37,7 +39,8 @@ function MapComponent({
   setOptimizedRoute, 
   darkMode,
   showBackgroundRoutes, 
-  mapLayer 
+  mapLayer,
+  showPizzaPoint  // Assurez-vous que cette prop est correctement reçue
 }) {
   const [routesData, setRoutesData] = useState(null);
   const [transportData, setTransportData] = useState(null);
@@ -148,6 +151,12 @@ function MapComponent({
         {optimizedRoute && (
           <OptimizeRoute route={optimizedRoute} />
         )}
+        
+        {/* Ajout du composant de position utilisateur */}
+        <UserLocationMarker />
+        
+        {/* Affichage du point pizza si activé, et passage de setOptimizedRoute */}
+        {showPizzaPoint && <RandomPizzaPoint setOptimizedRoute={setOptimizedRoute} />}
       </MapContainer>
       
       {/* Info panels */}

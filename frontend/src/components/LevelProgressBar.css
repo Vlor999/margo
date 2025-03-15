@@ -1,0 +1,121 @@
+.level-progress-container {
+  background-color: var(--sidebar-bg-color);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.level-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.level-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--section-header-color);
+}
+
+.points-total {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e74c3c;
+}
+
+.reset-points-btn {
+  background: transparent;
+  border: none;
+  color: var(--sidebar-text-color);
+  opacity: 0.5;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 5px;
+}
+
+.reset-points-btn:hover {
+  opacity: 1;
+}
+
+.progress-bar-container {
+  height: 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 5px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c 0%, #f39c12 100%);
+  transition: width 0.3s ease;
+}
+
+.level-details {
+  font-size: 12px;
+  color: var(--sidebar-text-color);
+  opacity: 0.8;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.level-details p {
+  margin: 0;
+}
+
+.pizza-challenge-info {
+  background-color: rgba(231, 76, 60, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.pizza-challenge-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #e74c3c;
+}
+
+.pizza-challenge-info p {
+  margin: 5px 0;
+  font-size: 12px;
+  color: var(--sidebar-text-color);
+}
+
+.next-level-minimal {
+  font-size: 12px;
+  color: var(--sidebar-text-color);
+  opacity: 0.8;
+  text-align: right;
+  margin-bottom: 5px;
+}
+
+.pizza-points-note {
+  font-size: 12px;
+  color: var(--sidebar-text-color);
+  text-align: center;
+  padding-top: 5px;
+  border-top: 1px dotted rgba(0, 0, 0, 0.1);
+  margin-top: 5px;
+}
+
+/* Dark mode adjustments */
+.dark-mode .level-progress-container {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .progress-bar-container {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .pizza-challenge-info {
+  background-color: rgba(231, 76, 60, 0.15);
+}
+
+.dark-mode .pizza-points-note {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}

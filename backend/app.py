@@ -13,6 +13,8 @@ import qrcode
 import io
 from fastapi.responses import StreamingResponse
 from mtag_api import calculate_tram_route  # Import the function from mtag_api.py
+import random
+from datetime import datetime, timedelta
 
 app = FastAPI(title="Grenoble Transport API")
 
@@ -26,6 +28,22 @@ app.add_middleware(
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Coordinates boundaries for Grenoble area
+GRENOBLE_BOUNDS = {
+    "min_lat": 45.15,
+    "max_lat": 45.22,
+    "min_lng": 5.68,
+    "max_lng": 5.78
+}
+
+# Store the current random point
+current_random_point = {
+    "lat": 45.188529,  # Default to Grenoble center
+    "lng": 5.724524,
+    "timestamp": datetime.now().isoformat(),
+    "expiry": (datetime.now() + timedelta(minutes=30)).isoformat()
+}
 
 # API routes
 @app.get("/")
@@ -613,6 +631,41 @@ async def optimize_route(
         error_details = traceback.format_exc()
         print(f"Error in optimize_route: {e}\n{error_details}")
         raise HTTPException(status_code=500, detail=f"Failed to optimize route: {str(e)}")
+
+@app.get("/api/random-point")
+async def get_random_point():
+    """Get or generate a random point within Grenoble"""
+    global current_random_point
+    
+    now = datetime.now()
+    expiry_time = datetime.fromisoformat(current_random_point["expiry"])
+    
+    # Generate new point if expired
+    if now >= expiry_time:
+        # Generate random point within Grenoble bounds
+        lat = random.uniform(GRENOBLE_BOUNDS["min_lat"], GRENOBLE_BOUNDS["max_lat"])
+        lng = random.uniform(GRENOBLE_BOUNDS["min_lng"], GRENOBLE_BOUNDS["max_lng"])
+        
+        # Update current random point
+        current_random_point = {
+            "lat": lat,
+            "lng": lng,
+            "timestamp": now.isoformat(),
+            "expiry": (now + timedelta(minutes=30)).isoformat()
+        }
+    
+    # Calculate remaining time
+    remaining_seconds = (expiry_time - now).total_seconds()
+    
+    return {
+        "point": {
+            "lat": current_random_point["lat"],
+            "lng": current_random_point["lng"]
+        },
+        "timestamp": current_random_point["timestamp"],
+        "expiry": current_random_point["expiry"],
+        "remainingTime": int(remaining_seconds)
+    }
 
 @app.post("/generate_qr")
 async def generate_qr(route: str):
