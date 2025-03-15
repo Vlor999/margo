@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './Sidebar.css';
 import LevelProgressBar from './LevelProgressBar';
@@ -15,6 +15,154 @@ function Sidebar({ onFilterChange, routeDetails, setOptimizedRoute, isVisible = 
   });
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Nouveaux états pour les suggestions d'adresses
+  const [startSuggestions, setStartSuggestions] = useState([]);
+  const [endSuggestions, setEndSuggestions] = useState([]);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [showStartSuggestions, setShowStartSuggestions] = useState(false);
+  const [showEndSuggestions, setShowEndSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
+  // Références pour gérer le clic en dehors des suggestions
+  const startInputRef = useRef(null);
+  const endInputRef = useRef(null);
+  const startSuggestionsRef = useRef(null);
+  const endSuggestionsRef = useRef(null);
+
+  // Délai pour la recherche d'adresses
+  const debounceTimeoutRef = useRef(null);
+
+  // Effet pour gérer les clics en dehors des suggestions
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (startInputRef.current && !startInputRef.current.contains(event.target) && 
+          startSuggestionsRef.current && !startSuggestionsRef.current.contains(event.target)) {
+        setShowStartSuggestions(false);
+      }
+      if (endInputRef.current && !endInputRef.current.contains(event.target) && 
+          endSuggestionsRef.current && !endSuggestionsRef.current.contains(event.target)) {
+        setShowEndSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Fonction pour obtenir des suggestions d'adresses
+  const fetchAddressSuggestions = async (query, isStart) => {
+    if (query.length < 3) {
+      isStart ? setStartSuggestions([]) : setEndSuggestions([]);
+      isStart ? setShowStartSuggestions(false) : setShowEndSuggestions(false);
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+    try {
+      // Utilisation de l'API Nominatim avec restriction sur la région de Grenoble
+      const params = {
+        q: query,
+        format: 'json',
+        addressdetails: 1,
+        limit: 5,
+        viewbox: '5.6,45.1,5.8,45.3',
+        bounded: 1,
+      };
+      
+      const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params,
+        headers: { 'User-Agent': 'GrenobleTransportApp/1.0' }
+      });
+      
+      const suggestions = response.data.map(item => ({
+        address: item.display_name,
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon)
+      }));
+      
+      if (isStart) {
+        setStartSuggestions(suggestions);
+        setShowStartSuggestions(true);
+      } else {
+        setEndSuggestions(suggestions);
+        setShowEndSuggestions(true);
+      }
+      setActiveSuggestionIndex(0);
+    } catch (error) {
+      console.error('Error fetching address suggestions:', error);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  // Fonction pour traiter les changements dans les champs d'adresse avec délai
+  const handleAddressInputChange = (e) => {
+    const { name, value } = e.target;
+    setAddressInput(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear previous debounce timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    // Set new debounce timeout
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (name === 'startAddress') {
+        fetchAddressSuggestions(value, true);
+      } else if (name === 'endAddress') {
+        fetchAddressSuggestions(value, false);
+      }
+    }, 500); // 500ms delay
+  };
+
+  // Fonction pour sélectionner une suggestion
+  const selectSuggestion = (suggestion, isStart) => {
+    if (isStart) {
+      setAddressInput(prev => ({ ...prev, startAddress: suggestion.address }));
+      setShowStartSuggestions(false);
+    } else {
+      setAddressInput(prev => ({ ...prev, endAddress: suggestion.address }));
+      setShowEndSuggestions(false);
+    }
+  };
+
+  // Gestion des touches pour navigation dans les suggestions
+  const handleKeyDown = (e, isStart) => {
+    const suggestions = isStart ? startSuggestions : endSuggestions;
+    
+    // Si pas de suggestions ou suggestions pas affichées, ne rien faire
+    if (!suggestions.length || !(isStart ? showStartSuggestions : showEndSuggestions)) {
+      return;
+    }
+    
+    // Flèche bas
+    if (e.keyCode === 40) {
+      setActiveSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    }
+    // Flèche haut
+    else if (e.keyCode === 38) {
+      setActiveSuggestionIndex(prev => 
+        prev > 0 ? prev - 1 : 0
+      );
+    }
+    // Entrée
+    else if (e.keyCode === 13) {
+      e.preventDefault();
+      selectSuggestion(suggestions[activeSuggestionIndex], isStart);
+    }
+    // Échap
+    else if (e.keyCode === 27) {
+      isStart ? setShowStartSuggestions(false) : setShowEndSuggestions(false);
+    }
+  };
 
   const handleRouteTypeChange = (e) => {
     const value = e.target.value;
@@ -55,14 +203,6 @@ function Sidebar({ onFilterChange, routeDetails, setOptimizedRoute, isVisible = 
       routeTypes: [],
       transportTypes: [],
       maxSpeed: null
-    });
-  };
-
-  const handleAddressInputChange = (e) => {
-    const { name, value } = e.target;
-    setAddressInput({
-      ...addressInput,
-      [name]: value
     });
   };
 
@@ -121,26 +261,70 @@ function Sidebar({ onFilterChange, routeDetails, setOptimizedRoute, isVisible = 
           <div className="route-optimizer">
             <h3>Planifiez votre trajet</h3>
             
-            <div className="form-group">
+            <div className="form-group address-input-group">
               <label>Point de départ:</label>
-              <input 
-                type="text" 
-                name="startAddress" 
-                value={addressInput.startAddress} 
-                onChange={handleAddressInputChange} 
-                placeholder="Adresse de départ"
-              />
+              <div className="autocomplete-container">
+                <input 
+                  type="text" 
+                  name="startAddress" 
+                  value={addressInput.startAddress} 
+                  onChange={handleAddressInputChange} 
+                  onKeyDown={(e) => handleKeyDown(e, true)}
+                  onClick={() => setShowStartSuggestions(true)}
+                  placeholder="Adresse de départ"
+                  ref={startInputRef}
+                />
+                {showStartSuggestions && startSuggestions.length > 0 && (
+                  <div className="suggestions-list" ref={startSuggestionsRef}>
+                    {startSuggestions.map((suggestion, index) => (
+                      <div 
+                        key={index} 
+                        className={`suggestion-item ${index === activeSuggestionIndex ? 'active' : ''}`}
+                        onClick={() => selectSuggestion(suggestion, true)}
+                        onMouseEnter={() => setActiveSuggestionIndex(index)}
+                      >
+                        {suggestion.address}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {isLoadingSuggestions && showStartSuggestions && (
+                  <div className="suggestions-loading">Recherche...</div>
+                )}
+              </div>
             </div>
             
-            <div className="form-group">
+            <div className="form-group address-input-group">
               <label>Destination:</label>
-              <input 
-                type="text" 
-                name="endAddress" 
-                value={addressInput.endAddress} 
-                onChange={handleAddressInputChange} 
-                placeholder="Adresse de destination"
-              />
+              <div className="autocomplete-container">
+                <input 
+                  type="text" 
+                  name="endAddress" 
+                  value={addressInput.endAddress} 
+                  onChange={handleAddressInputChange}
+                  onKeyDown={(e) => handleKeyDown(e, false)}
+                  onClick={() => setShowEndSuggestions(true)}
+                  placeholder="Adresse de destination"
+                  ref={endInputRef}
+                />
+                {showEndSuggestions && endSuggestions.length > 0 && (
+                  <div className="suggestions-list" ref={endSuggestionsRef}>
+                    {endSuggestions.map((suggestion, index) => (
+                      <div 
+                        key={index} 
+                        className={`suggestion-item ${index === activeSuggestionIndex ? 'active' : ''}`}
+                        onClick={() => selectSuggestion(suggestion, false)}
+                        onMouseEnter={() => setActiveSuggestionIndex(index)}
+                      >
+                        {suggestion.address}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {isLoadingSuggestions && showEndSuggestions && (
+                  <div className="suggestions-loading">Recherche...</div>
+                )}
+              </div>
             </div>
             
             <div className="form-group transport-mode-group">

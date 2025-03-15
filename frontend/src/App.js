@@ -13,8 +13,8 @@ function App() {
   const [optimizedRoute, setOptimizedRoute] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [showBackgroundRoutes, setShowBackgroundRoutes] = useState(true);
-  const [showPizzaPoint, setShowPizzaPoint] = useState(true);
+  const [showBackgroundRoutes, setShowBackgroundRoutes] = useState(false);
+  const [showPizzaPoint, setShowPizzaPoint] = useState(false);
   const [mapLayer, setMapLayer] = useState('standard');
 
   useEffect(() => {

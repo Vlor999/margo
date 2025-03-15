@@ -428,3 +428,66 @@
     display: none; /* Cacher les informations sur les défis pizza sur les petits écrans */
   }
 }
+
+/* Styles pour l'autocomplétion */
+.autocomplete-container {
+  position: relative;
+  width: 100%;
+}
+
+.suggestions-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: var(--sidebar-bg-color);
+  border: 1px solid var(--input-border-color);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1050;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-item:hover, .suggestion-item.active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .suggestion-item:hover, .dark-mode .suggestion-item.active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.suggestions-loading {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  text-align: center;
+  background-color: var(--sidebar-bg-color);
+  border: 1px solid var(--input-border-color);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  font-size: 13px;
+  color: var(--sidebar-text-color);
+  opacity: 0.7;
+}
+
+.address-input-group input {
+  border-radius: 12px;
+}
+
+.address-input-group input:focus {
+  border-radius: 12px 12px 0 0;
+}
